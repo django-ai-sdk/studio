@@ -1,16 +1,19 @@
-PHONY: reset run
+PHONY: reset run db test
+
+PORT ?= 8000
+UV := uv run --extra qdrant --extra mcp --extra files --group studio
 
 reset:
-	rm db.sqlite3
-	rm -rf ../django_ai_sdk/migrations
-	uv run python manage.py makemigrations django_ai_sdk
-	uv run python manage.py migrate
-	uv run python manage.py load_demo_memories
-	uv run python manage.py load_demo_agents
+	rm -f db.sqlite3
+	$(UV) python manage.py migrate
+	$(UV) python manage.py load_demo_memories
+	$(UV) python manage.py load_demo_agents
 
 run:
-	uv run python manage.py runserver
-
+	$(UV) python manage.py runserver $(PORT)
 
 db:
 	uv run sqlite_web db.sqlite3
+
+test:
+	$(UV) pytest -v
