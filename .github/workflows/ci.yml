@@ -15,6 +15,9 @@ permissions:
 jobs:
   build:
     runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: mac
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +30,8 @@ jobs:
 
       - uses: actions/cache@v4
         with:
-          path: .build
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          path: mac/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('mac/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
       - name: Build macOS app

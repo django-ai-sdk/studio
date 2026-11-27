@@ -10,6 +10,9 @@ permissions:
 jobs:
   release:
     runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: mac
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +32,7 @@ jobs:
           make dmg VERSION="$VERSION" BUILD=${{ github.run_number }}
 
       - name: Checksum
-        working-directory: build
+        working-directory: mac/build
         run: shasum -a 256 "Studio-$VERSION.dmg" > SHA256SUMS && cat SHA256SUMS
 
       # A tag with a letter in the version (v0.1.0a1, v0.1.0b2, v0.1.0rc1) is a pre-release. --notes-file is prepended
@@ -42,5 +45,5 @@ jobs:
           [[ "${GITHUB_REF_NAME#v}" =~ [A-Za-z] ]] && prerelease=(--prerelease)
           gh release create "$GITHUB_REF_NAME" "build/Studio-$VERSION.dmg" build/SHA256SUMS \
             --title "Studio $VERSION" \
-            --generate-notes --notes-file .github/release-notes.md \
+            --generate-notes --notes-file ../.github/release-notes.md \
             "${prerelease[@]}"

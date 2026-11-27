@@ -2,7 +2,7 @@
 .build-*/
 build/
 .swiftpm/
-iOS/StudioiOS.xcodeproj/
+mac/iOS/StudioiOS.xcodeproj/
 .claude/skills/
 plans/
 skills-lock.json
