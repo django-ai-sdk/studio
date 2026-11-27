@@ -30,19 +30,6 @@ enum JSON: Codable, Hashable, Sendable {
         }
     }
 
-    init(any value: Any) {
-        switch value {
-        case let v as JSON: self = v
-        case is NSNull: self = .null
-        case let v as NSNumber where CFGetTypeID(v) == CFBooleanGetTypeID(): self = .bool(v.boolValue)
-        case let v as NSNumber: self = .number(v.doubleValue)
-        case let v as String: self = .string(v)
-        case let v as [Any]: self = .array(v.map(JSON.init(any:)))
-        case let v as [String: Any]: self = .object(v.mapValues(JSON.init(any:)))
-        default: self = .null
-        }
-    }
-
     subscript(key: String) -> JSON? {
         get { if case .object(let o) = self { o[key] } else { nil } }
         set {

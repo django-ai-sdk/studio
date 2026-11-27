@@ -51,11 +51,11 @@ struct InputDraft: Equatable {
         }
     }
 
-    func inputs(_ fields: [InputField]) -> Result<[String: Any], InputProblems> {
-        var out: [String: Any] = [:]
+    func inputs(_ fields: [InputField]) -> Result<[String: JSON], InputProblems> {
+        var out: [String: JSON] = [:]
         var problems: [String: String] = [:]
         for f in fields {
-            if f.type == "bool" && f.options == nil { out[f.name] = flags[f.name] ?? false; continue }
+            if f.type == "bool" && f.options == nil { out[f.name] = .bool(flags[f.name] ?? false); continue }
             let raw = text[f.name] ?? ""
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
@@ -63,24 +63,23 @@ struct InputDraft: Equatable {
                 continue
             }
             if let options = f.options {
-                if let i = Int(raw), options.indices.contains(i) { out[f.name] = options[i].any }
+                if let i = Int(raw), options.indices.contains(i) { out[f.name] = options[i] }
                 continue
             }
             switch f.type {
             case "int":
-                if let v = Int(trimmed) { out[f.name] = v } else { problems[f.name] = "Enter a whole number." }
+                if let v = Int(trimmed) { out[f.name] = .number(Double(v)) } else { problems[f.name] = "Enter a whole number." }
             case "float":
-                if let v = Double(trimmed.replacingOccurrences(of: ",", with: ".")) { out[f.name] = v }
+                if let v = Double(trimmed.replacingOccurrences(of: ",", with: ".")) { out[f.name] = .number(v) }
                 else { problems[f.name] = "Enter a number." }
             case _ where f.conversation && f.type == "list":
-                out[f.name] = [["role": "user", "content": raw]]
+                out[f.name] = .array([.object(["role": .string("user"), "content": .string(raw)])])
             case _ where f.isJSON:
-                if let data = trimmed.data(using: .utf8),
-                   let v = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) {
+                if let v = try? JSONDecoder().decode(JSON.self, from: Data(trimmed.utf8)) {
                     out[f.name] = v
                 } else { problems[f.name] = "Not valid JSON." }
             default:
-                out[f.name] = raw
+                out[f.name] = .string(raw)
             }
         }
         return problems.isEmpty ? .success(out) : .failure(InputProblems(byField: problems))

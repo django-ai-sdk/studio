@@ -263,7 +263,6 @@ struct WorkflowDetailView: View {
         case .failure(let p): problems = p.byField
         case .success(let inputs):
             problems = [:]
-            let inputs = inputs.mapValues { JSON(any: $0) }
             Task { await model.start(workflow, inputs: inputs) }
         }
     }
