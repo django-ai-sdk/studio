@@ -64,17 +64,15 @@ extension API {
         let (respData, response) = try await session.upload(for: req, from: body,
                                                              delegate: UploadProgressDelegate(progress))
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        guard (200..<300).contains(status) else {
-            throw UploadError(status: status, message: Self.error(respData, status).message)
-        }
+        if status == 409 { throw FileAlreadyInThread(message: Self.error(respData, status).message) }
+        guard (200..<300).contains(status) else { throw Self.error(respData, status) }
         do { return try JSONDecoder().decode(FileStatus.self, from: respData) } catch {
             throw APIError(message: "Unexpected upload response: \(error)")
         }
     }
 }
 
-struct UploadError: LocalizedError {
-    let status: Int
+struct FileAlreadyInThread: LocalizedError {
     let message: String
     var errorDescription: String? { message }
 }

@@ -316,7 +316,7 @@ final class AttachmentStore {
                 status = try await chat.api.uploadThreadFile(
                     thread: thread, name: item.name, mimeType: item.mimeType, data: data
                 ) { _ = sink.yield($0) }
-            } catch let error as UploadError where error.status == 409 {
+            } catch let error as FileAlreadyInThread {
                 guard let existing = try await chat.api.threadFiles(thread: thread)
                     .first(where: { $0.file_name == item.name && $0.file_size == item.size })
                 else { throw error }
