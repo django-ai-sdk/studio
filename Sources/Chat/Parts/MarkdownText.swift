@@ -135,8 +135,7 @@ struct CodeBlockFrame<Content: View>: View {
                 .help("Copy code")
                 .accessibilityLabel(copied ? "Copied" : "Copy code")
                 #if os(iOS)
-                .frame(minHeight: 44).contentShape(Rectangle())
-                .padding(.vertical, -10)
+                .contentShape(Rectangle().inset(by: -12))
                 #endif
             }
             .padding(.horizontal, 12)

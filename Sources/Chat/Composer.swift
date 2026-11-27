@@ -112,10 +112,9 @@ struct Composer: View {
             Label("Attach", systemImage: "plus")
                 .labelStyle(.iconOnly)
                 .font(.body.weight(.medium))
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
+                .frame(minWidth: 32, minHeight: 32)
+                .contentShape(Rectangle().inset(by: -6))
         }
-        .padding(-6)
         .accessibilityLabel("Attach")
         #endif
     }
@@ -177,10 +176,9 @@ struct Composer: View {
 private struct HitAreaButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button(configuration)
-            .frame(minWidth: 44, minHeight: 44)
-            .contentShape(Rectangle())
+            .frame(minWidth: 32, minHeight: 32)
+            .contentShape(Rectangle().inset(by: -6))
             .onTapGesture { configuration.trigger() }
-            .padding(-6)
     }
 }
 
