@@ -1,13 +1,8 @@
 import SwiftUI
 
-// Words, symbols and colours for oversight records (web: oversight/format.ts,
-// policy.ts, OversightOutcome.tsx, lib/oversight.ts lensStyle, thread-panel/turnStages.ts).
-
 enum OversightFormat {
-    /// "pii_leak" → "pii leak".
     static func humanize(_ name: String) -> String { name.replacingOccurrences(of: "_", with: " ") }
 
-    /// "pii_leak" → "Pii leak".
     static func label(_ name: String) -> String {
         let text = humanize(name)
         return text.prefix(1).uppercased() + text.dropFirst()
@@ -36,7 +31,6 @@ enum OversightFormat {
         OversightDate.parse(iso)?.formatted(.dateTime.month(.abbreviated).day().hour().minute()) ?? ""
     }
 
-    /// A lens or rule value in a few words.
     static func value(_ value: JSON?) -> String {
         switch value {
         case nil, .null?: "—"
@@ -48,8 +42,6 @@ enum OversightFormat {
         }
     }
 }
-
-// MARK: Stages
 
 struct OversightStageInfo {
     let key: String
@@ -79,7 +71,6 @@ struct OversightStageInfo {
     }
 }
 
-/// One policy stage of a turn with what happened there (web: turnStages.ts).
 struct OversightStage: Identifiable {
     enum Status { case completed, failed, running, pending }
 
@@ -105,7 +96,6 @@ struct OversightStage: Identifiable {
         return parts.joined(separator: " · ")
     }
 
-    /// "Block injection acted", or "3 rules acted".
     static func actedLabel(_ matches: [OversightMatch]) -> String? {
         var names: [String] = []
         for m in matches where m.acted {
@@ -140,8 +130,6 @@ struct OversightStage: Identifiable {
     }
 }
 
-// MARK: Outcomes
-
 struct OversightTone {
     let label: String
     let symbol: String
@@ -158,14 +146,12 @@ struct OversightTone {
         }
     }
 
-    /// The badge for a turn: still checking, sent to review, or how it ended.
     static func turn(_ turn: OversightTurn) -> OversightTone {
         if !turn.closed { return .init(label: "Checking", symbol: "hourglass", color: .blue) }
         if (turn.reviews_open ?? 0) > 0 { return .init(label: "In review", symbol: "person.badge.clock", color: .purple) }
         return outcome(turn.outcome)
     }
 
-    /// A lens answer: error, low score, a worrying choice, found something, or fine.
     static func answer(_ a: OversightAnswer) -> OversightTone {
         let text = OversightFormat.value(a.value)
         if let error = a.error, !error.isEmpty { return .init(label: "Error", symbol: "exclamationmark.circle", color: .red) }
@@ -185,7 +171,6 @@ struct OversightTone {
         }
     }
 
-    /// A rule match by its strongest action: block, restrict, mask, then notify/alert.
     static func match(_ m: OversightMatch, reviewed: Bool) -> OversightTone {
         let kinds = m.actionKinds
         let symbol: String, color: Color
@@ -209,8 +194,6 @@ struct OversightTone {
     }
 }
 
-// MARK: Rules in words (web: policy.ts describeCondition / describeAction)
-
 indirect enum OversightCondition: Hashable {
     case text(String)
     case group(all: Bool, items: [OversightCondition])
@@ -228,7 +211,6 @@ indirect enum OversightCondition: Hashable {
             for child in children {
                 let c = child.object ?? [:]
                 let op = c["op"]?.string ?? ""
-                // "X is yes" and "X is 90% sure" read as one line in an "all".
                 if all, case .text(let last)? = items.last, let p = previous, op == "confident" || op == "unsure",
                    p["lens"] == c["lens"], p["op"]?.string != "confident", p["op"]?.string != "unsure" {
                     let v = c["value"]?.number ?? 0
@@ -275,7 +257,6 @@ indirect enum OversightCondition: Hashable {
 }
 
 enum OversightAction {
-    /// One action of a rule in words, for the stage it ran at.
     static func describe(_ action: JSON, stage: String) -> String {
         let kind = action["kind"]?.string ?? ""
         let severity = action["severity"]?.string.map { " (\(OversightFormat.humanize($0)))" } ?? ""

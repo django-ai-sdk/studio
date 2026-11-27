@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// State shared by the agents screens: which agents are runtime (editable) agents and the
-/// option lists the builder offers. The agent list itself lives in `AppStore.agents`.
 @Observable @MainActor
 final class AgentsModel {
     var runtime: [String: RuntimeAgent] = [:]
@@ -9,7 +7,6 @@ final class AgentsModel {
     var toolOptions: [RuntimeAgentToolOption] = []
     var integrations: [IntegrationOption] = []
     var memories: [MemoryOption] = []
-    /// Per-agent details (description etc.) for the gallery, fetched lazily as cards appear.
     var details: [String: AgentInfo] = [:]
     var loaded = false
     var error: String?
@@ -32,7 +29,6 @@ final class AgentsModel {
         if let info = try? await api.agentInfo(id) { details[id] = info }
     }
 
-    /// Builder options; the optional endpoints (integrations, memories) may be absent.
     func loadOptions(_ api: API) async {
         async let b = try? api.runtimeAgentBases()
         async let t = try? api.runtimeAgentTools()
@@ -46,7 +42,6 @@ final class AgentsModel {
     }
 }
 
-/// What an agent can do, as quiet SF Symbols (cards, rows) or small labelled symbols (headers).
 struct CapabilityBadges: View {
     enum Style { case symbols, labels }
 
@@ -100,8 +95,6 @@ struct CapabilityBadges: View {
     }
 }
 
-/// Icon tile with the agent's initial (or a symbol): a soft accent-tinted fill with an
-/// accent-coloured glyph, the same calm treatment for every agent (like Settings rows).
 struct AgentIcon: View {
     let id: String
     let name: String

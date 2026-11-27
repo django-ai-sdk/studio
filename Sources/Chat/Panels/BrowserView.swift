@@ -4,8 +4,6 @@ import AppKit
 import SwiftUI
 import WebKit
 
-/// The Browser tab's page: SwiftUI `WebView` on macOS 26, a `WKWebView` before; a failed load
-/// shows a friendly error over it with a way out to the default browser.
 struct BrowserView: View {
     let session: BrowserSession
 
@@ -47,8 +45,6 @@ struct BrowserView: View {
     }
 }
 
-/// macOS 15 / iOS 18–25: hosts the session's `WKWebView` (the session owns it, so history
-/// survives tab switches).
 #if os(macOS)
 private struct LegacyWebView: NSViewRepresentable {
     let webView: WKWebView
@@ -65,11 +61,6 @@ private struct LegacyWebView: UIViewRepresentable {
 }
 #endif
 
-// MARK: Toolbar
-
-/// Safari-style header for the Browser tab: back/forward, reload/stop, the page's title and host
-/// (lock for secure pages) with a load progress line, copy link, open in the default browser,
-/// then the panel's own full width and close buttons (`trailing`).
 struct BrowserToolbar<Trailing: View>: View {
     let session: BrowserSession
     @ViewBuilder var trailing: Trailing
@@ -77,7 +68,6 @@ struct BrowserToolbar<Trailing: View>: View {
     @State private var copied = false
 
     #if os(iOS)
-    /// 44 pt hit area (HIG); the borderless glyph looks the same size.
     static var buttonSize: CGFloat { ThreadPanelView.buttonSize }
     #endif
 
@@ -86,7 +76,6 @@ struct BrowserToolbar<Trailing: View>: View {
     private static var leadingPadding: CGFloat { 8 }
     private static var trailingPadding: CGFloat { 14 }
     #else
-    // The 44 pt buttons fill the gaps themselves; keep room for the title on iPhone.
     private static var spacing: CGFloat { 0 }
     private static var leadingPadding: CGFloat { 2 }
     private static var trailingPadding: CGFloat { 4 }
@@ -106,7 +95,6 @@ struct BrowserToolbar<Trailing: View>: View {
                 .padding(.horizontal, 6)
             Group {
                 if session.isLoading {
-                    // No ⌘. here: the composer uses it to stop the answer.
                     button("Stop Loading", systemImage: "xmark", action: session.stop)
                 } else {
                     button("Reload Page", systemImage: "arrow.clockwise", action: session.reload)
@@ -120,7 +108,6 @@ struct BrowserToolbar<Trailing: View>: View {
                 }
                 button("Open in Default Browser", systemImage: "safari", action: session.openInDefaultBrowser)
                 #else
-                // Narrow on iPhone: link actions share one menu.
                 Menu {
                     Button("Copy Link", systemImage: "link", action: session.copyLink)
                     Button("Open in Safari", systemImage: "safari", action: session.openInDefaultBrowser)
@@ -142,7 +129,6 @@ struct BrowserToolbar<Trailing: View>: View {
         .overlay(alignment: .bottom) { progressLine }
     }
 
-    /// Title over host, centered like Safari's compact address field; right-click for link actions.
     private var address: some View {
         VStack(spacing: 0) {
             Text(session.title.isEmpty ? session.host : session.title)
@@ -201,9 +187,6 @@ struct BrowserToolbar<Trailing: View>: View {
     }
 }
 
-// MARK: Link menu
-
-/// "Open in Default Browser" on the Mac; iOS hands web pages to Safari.
 var openInBrowserTitle: LocalizedStringKey {
     #if os(macOS)
     "Open in Default Browser"
@@ -212,8 +195,6 @@ var openInBrowserTitle: LocalizedStringKey {
     #endif
 }
 
-/// Context menu for a web link in the thread: links open in the panel's browser on click, so this
-/// offers the default browser (⌘-click does the same) and copying.
 struct WebLinkMenu: View {
     let url: URL
     @Environment(\.openURL) private var openURL

@@ -1,15 +1,11 @@
 import SwiftUI
 
-/// Workflows screen (detail column). macOS: workflow list on the left, the selected workflow's
-/// inputs and recent runs in the middle, the selected run in an inspector on the right.
-/// iOS: a list that pushes the workflow (form and runs); a run opens in a sheet.
 struct WorkflowsView: View {
     @Environment(AppStore.self) private var store
     @State private var model = WorkflowsModel()
 
     var body: some View {
         content
-            // Errors inline with a retry rather than a modal alert.
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let error = model.error, !model.workflows.isEmpty {
                     RetryBanner(message: error) { Task { await model.refresh() } }
@@ -20,7 +16,6 @@ struct WorkflowsView: View {
                 model.store = store
                 await model.load()
             }
-            // Outermost, so the inspector/sheet (RunView) and toolbar get the model too.
             .environment(model)
     }
 
@@ -99,7 +94,6 @@ struct WorkflowsView: View {
         if sizeClass == .regular { wide } else { stack }
     }
 
-    /// iPad (regular width): list beside the selected workflow, like the Mac; the run in a sheet.
     private var wide: some View {
         @Bindable var model = model
         return HStack(spacing: 0) {
@@ -121,8 +115,6 @@ struct WorkflowsView: View {
         }
         .navigationTitle(model.selected?.name ?? "Workflows")
         .navigationBarTitleDisplayMode(.inline)
-        // A sheet rather than an inspector: next to the sidebar, list and form a fourth column
-        // leaves the form too narrow, even on a 13-inch iPad.
         .sheet(isPresented: runShown) { runSheet }
     }
 
@@ -137,12 +129,10 @@ struct WorkflowsView: View {
                     }
                 }
         }
-        // Half height on iPhone; iPad shows a centered form sheet.
         .presentationDetents(sizeClass == .compact ? [.medium, .large] : [.large])
         .environment(model)
     }
 
-    /// iPhone: list → workflow (form and runs) → run in a sheet over that workflow.
     private var stack: some View {
         NavigationStack {
             List(model.workflows) { workflow in
@@ -160,7 +150,6 @@ struct WorkflowsView: View {
                     }
                 }
                 .navigationBarTitleDisplayMode(.inline)
-                // On the pushed workflow, so the run reads as part of it (not of the list).
                 .sheet(isPresented: runShown) { runSheet }
                 .environment(model)
             }
@@ -184,7 +173,6 @@ private struct WorkflowRow: View {
     }
 }
 
-/// Middle pane: overview, steps, the input form with Run, and recent runs.
 struct WorkflowDetailView: View {
     @Environment(WorkflowsModel.self) private var model
     let workflow: WorkflowItem
@@ -230,7 +218,6 @@ struct WorkflowDetailView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
-                    // While an approval waits, ⌘↩ belongs to its Approve button.
                     .keyboardShortcut(approvalWaiting ? nil : KeyboardShortcut(.return, modifiers: .command))
                     .help(approvalWaiting ? "Run" : "Run (⌘↩)")
                     .disabled(model.busy || !workflow.active)
@@ -250,7 +237,6 @@ struct WorkflowDetailView: View {
         .formStyle(.grouped)
         .onAppear { draft = InputDraft(fields) }
         .task {
-            // On iOS the workflow is pushed rather than selected in a list.
             if model.selectedID != workflow.id { model.selectedID = workflow.id }
             await model.loadRuns()
         }
@@ -277,7 +263,6 @@ struct WorkflowDetailView: View {
         case .failure(let p): problems = p.byField
         case .success(let inputs):
             problems = [:]
-            // `JSON(any:)` also passes `[String: JSON]` through unchanged.
             let inputs = inputs.mapValues { JSON(any: $0) }
             Task { await model.start(workflow, inputs: inputs) }
         }

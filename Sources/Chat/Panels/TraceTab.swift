@@ -1,12 +1,9 @@
 import SwiftUI
 
-/// The thread's spans, one waterfall per turn (user message → reply), newest first.
-/// Selecting a span opens its detail inline. Refreshes when a reply finishes streaming.
 struct TraceTab: View {
     let threadID: String?
     @Environment(ChatStore.self) private var chat
     @State private var model = TraceModel()
-    /// Bumped when a reply finishes streaming; restarts the load task (cancelling the previous one).
     @State private var generation = 0
 
     private struct LoadKey: Hashable { let thread: String?; let generation: Int }
@@ -17,7 +14,6 @@ struct TraceTab: View {
                 guard let threadID else { model.reset(); return }
                 await model.load(thread: threadID, api: chat.api)
                 guard generation > 0 else { return }
-                // Spans are written when the run's root span closes, which can land just after the stream ends.
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
                 await model.load(thread: threadID, api: chat.api)
@@ -34,7 +30,6 @@ struct TraceTab: View {
     }
 }
 
-/// Everything below the environment: states, summary and turns. Split out so it renders offscreen with data.
 struct TraceTabContent: View {
     let threadID: String?
     let model: TraceModel
@@ -76,7 +71,6 @@ struct TraceTabContent: View {
     }
 }
 
-/// Summary plus one card per turn. Measures its width to widen the waterfall in full-width mode.
 private struct TraceTimeline: View {
     let model: TraceModel
     @Binding var showHooks: Bool
@@ -112,18 +106,13 @@ private struct TraceTimeline: View {
     }
 }
 
-/// Column sizes for the current panel width: narrow side panel or full width.
 struct TraceLayout: Equatable {
     let width: CGFloat
     var wide: Bool { width >= 620 }
-    /// The timeline track grows with the panel.
     var track: CGFloat { wide ? min(max(width * 0.32, 180), 520) : max(48, min(width * 0.17, 100)) }
     var indent: CGFloat { wide ? 16 : 8 }
-    /// Deep trees stop indenting in a narrow panel so names stay readable.
     var maxIndentDepth: Int { wide ? 16 : 5 }
 }
-
-// MARK: - Summary
 
 private struct TraceSummary: View {
     let model: TraceModel

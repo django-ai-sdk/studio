@@ -1,10 +1,5 @@
 import SwiftUI
 
-/// Agents screen (detail column): a gallery of agents, drilling into a detail page.
-/// Runtime (user-defined) agents can be built, edited, shared and deleted here.
-///
-/// Regular width (Mac, iPad) shows an adaptive grid of cards; compact width (iPhone) an
-/// inset-grouped list. Both group "Your Agents" (runtime) above "Built-in".
 struct AgentsView: View {
     @Environment(AppStore.self) private var app
     @State private var model = AgentsModel()
@@ -30,12 +25,10 @@ struct AgentsView: View {
         }
     }
 
-    /// (title, agents) per non-empty group, runtime agents first.
     private var sections: [(title: String, agents: [Agent])] {
         let agents = filtered
         let yours = agents.filter { model.runtime[$0.id] != nil }
         let builtIn = agents.filter { model.runtime[$0.id] == nil }
-        // Until we know which agents are runtime agents, don't split them.
         if !model.loaded { return [("", agents)] }
         return [("Your Agents", yours), ("Built-in", builtIn)].filter { !$0.1.isEmpty }
     }
@@ -46,7 +39,6 @@ struct AgentsView: View {
                 .navigationTitle("Agents")
                 .navigationDestination(for: String.self) { id in
                     AgentDetailView(agentID: id, onDeleted: { path.removeAll { $0 == id } })
-                        // Pushed views inside a split view don't inherit the stack's environment on macOS.
                         .environment(model)
                 }
         }
@@ -69,8 +61,6 @@ struct AgentsView: View {
         }
     }
 
-    // MARK: Layout
-
     @ViewBuilder private var content: some View {
         Group {
             if compact { list } else { grid }
@@ -84,7 +74,6 @@ struct AgentsView: View {
         #endif
         .toolbar {
             #if os(macOS)
-            // iOS refreshes with pull-to-refresh instead.
             ToolbarItem {
                 Button("Refresh", systemImage: "arrow.clockwise") { Task { await refresh() } }
                     .help("Reload agents")
@@ -178,10 +167,7 @@ struct AgentsView: View {
         }
     }
 
-    /// A failed runtime-agent load while the list itself is there: say so above the agents.
     private var bannerError: String? { app.agents.isEmpty ? nil : model.error }
-
-    // MARK: Actions
 
     @ViewBuilder private func menu(for agent: Agent) -> some View {
         let runtime = model.runtime[agent.id]
@@ -224,9 +210,6 @@ struct AgentsView: View {
     }
 }
 
-// MARK: - Cards and rows
-
-/// Display strings shared by the card and the row.
 private struct AgentSummary {
     let name: String
     let subtitle: String
@@ -244,14 +227,12 @@ private struct AgentSummary {
         } else {
             subtitle = runtime != nil ? "Custom agent" : "Built-in agent"
         }
-        // "openai/gpt-oss-120b" reads as "gpt-oss-120b"; the detail page shows the full id.
         self.model = agent.model.map { $0.split(separator: "/").last.map(String.init) ?? $0 } ?? "Default model"
     }
 
     var inactive: Bool { runtime.map { !$0.active } ?? false }
 }
 
-/// Gallery card: icon tile, name, one-line-ish description, then model and capabilities.
 private struct AgentCardContent: View {
     let agent: Agent
     @Environment(AgentsModel.self) private var model
@@ -289,7 +270,6 @@ private struct AgentCardContent: View {
     }
 }
 
-/// iPhone list row: icon, name, description, model and capabilities.
 private struct AgentRowContent: View {
     let agent: Agent
     @Environment(AgentsModel.self) private var model
@@ -321,7 +301,6 @@ private struct AgentRowContent: View {
     }
 }
 
-/// Card chrome: neutral grouped background with hover (Mac, iPad pointer) and press feedback.
 private struct AgentCardButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         AgentCardChrome(configuration: configuration)
@@ -355,7 +334,6 @@ private struct AgentCardChrome: View {
     }
 }
 
-/// Inline, non-blocking error with a retry (agents and workflows screens).
 struct RetryBanner: View {
     let message: String
     var retry: () -> Void

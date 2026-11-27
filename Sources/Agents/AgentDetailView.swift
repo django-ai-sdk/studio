@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One agent: what it is, what it can call, and (for runtime agents) its settings and access.
 struct AgentDetailView: View {
     let agentID: String
     var onDeleted: () -> Void
@@ -98,8 +97,6 @@ struct AgentDetailView: View {
 
     private var modelName: String { runtime?.model ?? info?.model ?? listed?.model ?? "Default model" }
 
-    /// Hero header on a clear row: big icon tile, name, model, capabilities and Start Chat.
-    /// Stacked and centred on iPhone; side by side on wider layouts.
     private var header: some View {
         Section {
             Group {
@@ -203,7 +200,6 @@ struct AgentDetailView: View {
             async let i = app.api.agentInfo(id)
             async let t = app.api.agentTools(id)
             let (newInfo, newTools) = try await (i, t)
-            // A newer load (another agent selected) owns the view now.
             guard !Task.isCancelled, id == agentID else { return }
             (info, tools) = (newInfo, newTools)
             error = nil
@@ -244,7 +240,6 @@ private struct ToolRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(tool.label)
                 if let d = tool.description?.trimmingCharacters(in: .whitespacesAndNewlines), !d.isEmpty {
-                    // First paragraph only; the full docstring is in the help tag.
                     Text(d.components(separatedBy: "\n\n").first ?? d)
                         .font(.caption)
                         .foregroundStyle(.secondary)

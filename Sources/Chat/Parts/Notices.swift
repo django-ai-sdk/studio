@@ -1,14 +1,10 @@
 import SwiftUI
 
-// MARK: Oversight
-
-/// One banner per thing the user should know about oversight (web: OversightNotice.tsx).
 struct OversightBanners: View {
     let lines: [Oversight.Line]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Offsets: lines can repeat and rows hold no state.
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                 let style = Self.style(line.kind)
                 Label {
@@ -35,9 +31,6 @@ struct OversightBanners: View {
     }
 }
 
-// MARK: Errors
-
-/// Inline error callout for `data-error` / `error` parts and `finish_reason == "error"`.
 struct ErrorCallout: View {
     let message: String
     var reference: String?
@@ -66,8 +59,6 @@ struct ErrorCallout: View {
     }
 }
 
-// MARK: Sources (source-url / source-document parts)
-
 nonisolated struct SourceItem: Identifiable, Hashable {
     let id: String
     let number: Int
@@ -76,7 +67,6 @@ nonisolated struct SourceItem: Identifiable, Hashable {
     let isDocument: Bool
 }
 
-/// Numbered source chips under the answer.
 struct SourcesRow: View {
     let sources: [SourceItem]
     @Environment(\.openURL) private var openURL
@@ -112,7 +102,6 @@ struct SourcesRow: View {
 }
 
 private extension View {
-    /// Open Link / Open in Default Browser / Copy Link on right-click, for http(s) links only.
     @ViewBuilder func webLinkMenu(_ url: URL?) -> some View {
         if let url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
             contextMenu { WebLinkMenu(url: url) }
@@ -122,16 +111,12 @@ private extension View {
     }
 }
 
-// MARK: Citations (citations artifact)
-
-/// What the citations sheet shows: one citation's evidence, or the cited sources.
 nonisolated enum CitationFocus: Identifiable, Hashable {
     case citation(Int)
     case all
     var id: String { switch self { case .citation(let i): "c\(i)"; case .all: "all" } }
 }
 
-/// Sheet with the sources supporting a cited passage (web: the sources sheet).
 struct CitationsSheet: View {
     let data: Citations
     let focus: CitationFocus
@@ -205,9 +190,6 @@ private struct SourceCard: View {
     }
 }
 
-// MARK: Typing indicator
-
-/// Three pulsing dots while the reply has no content yet.
 struct TypingIndicator: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -230,23 +212,18 @@ struct TypingIndicator: View {
         .accessibilityLabel("Assistant is typing")
     }
 
-    /// 0…1 pulse for dot `dot` at time `t` (1.2 s period, dots 0.7 rad apart).
     private static func phase(_ t: Double, dot: Int) -> Double {
         let angle: Double = t * 2 * Double.pi / 1.2 - Double(dot) * 0.7
         return (sin(angle) + 1) / 2
     }
 }
 
-// MARK: Suggestions
-
-/// Follow-up suggestions (`data-suggestions`): tapping one sends it.
 struct SuggestionChips: View {
     let suggestions: [String]
     let send: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Offsets: suggestions can repeat and rows hold no state.
             ForEach(Array(suggestions.enumerated()), id: \.offset) { _, s in
                 Button { send(s) } label: {
                     Label(s, systemImage: "arrow.turn.down.right")
@@ -265,9 +242,6 @@ struct SuggestionChips: View {
     }
 }
 
-// MARK: Flow layout
-
-/// Wraps children onto new lines, like CSS `flex-wrap`.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 

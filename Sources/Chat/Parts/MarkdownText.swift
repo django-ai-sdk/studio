@@ -4,14 +4,9 @@ import AppKit
 import SwiftUI
 import Textual
 
-/// Chat markdown: headings, lists, tables, block quotes, inline code and syntax-highlighted code
-/// blocks (horizontal scroll + copy button), with document-wide text selection.
 struct MarkdownText: View {
     let markdown: String
 
-    /// Base point size of chat prose (answers and user bubbles) at the default text size: on macOS
-    /// a touch above the 13pt system body so long answers read comfortably in the chat column; on
-    /// iOS the 17pt body. Apply it with `.chatBodyFont()`, which scales it with Dynamic Type.
     #if os(macOS)
     static let bodySize: CGFloat = 14
     #else
@@ -29,7 +24,6 @@ struct MarkdownText: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// A fenced code block for `code`, with a fence longer than any backtick run inside it.
     static func fenced(_ code: String, language: String?) -> String {
         var longest = 0, run = 0
         for c in code { run = c == "`" ? run + 1 : 0; longest = max(longest, run) }
@@ -38,7 +32,6 @@ struct MarkdownText: View {
     }
 }
 
-/// Chat prose font: `MarkdownText.bodySize` scaled with Dynamic Type like `.body`.
 struct ChatBodyFont: ViewModifier {
     @ScaledMetric(relativeTo: .body) private var size = MarkdownText.bodySize
 
@@ -48,10 +41,8 @@ struct ChatBodyFont: ViewModifier {
 }
 
 extension View {
-    /// The chat prose font (answers and user bubbles), scaled with Dynamic Type.
     func chatBodyFont() -> some View { modifier(ChatBodyFont()) }
 
-    /// At least a 44pt hit area on iOS without changing the visual size; unchanged on macOS.
     @ViewBuilder func chatPartHitTarget() -> some View {
         #if os(iOS)
         frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
@@ -61,7 +52,6 @@ extension View {
     }
 }
 
-/// Paragraphs with a relaxed line height and clear space between them.
 struct ChatParagraphStyle: StructuredText.ParagraphStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -70,7 +60,6 @@ struct ChatParagraphStyle: StructuredText.ParagraphStyle {
     }
 }
 
-/// Headings sized for a chat column rather than a document page.
 struct ChatHeadingStyle: StructuredText.HeadingStyle {
     private static let scales: [CGFloat] = [1.45, 1.3, 1.15, 1.05, 1, 1]
 
@@ -84,8 +73,6 @@ struct ChatHeadingStyle: StructuredText.HeadingStyle {
     }
 }
 
-/// Code block: language label and copy button above monospaced, highlighted, horizontally
-/// scrolling code on a recessed background.
 struct ChatCodeBlockStyle: StructuredText.CodeBlockStyle {
     func makeBody(configuration: Configuration) -> some View {
         CodeBlockFrame(language: configuration.languageHint, copy: configuration.codeBlock.copyToPasteboard) {
@@ -103,8 +90,6 @@ struct ChatCodeBlockStyle: StructuredText.CodeBlockStyle {
     }
 }
 
-/// Tables: the default look; in compact width (iPhone) wide tables scroll horizontally like code
-/// blocks instead of squeezing their columns.
 struct ChatTableStyle: StructuredText.TableStyle {
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -123,7 +108,6 @@ struct ChatTableStyle: StructuredText.TableStyle {
     }
 }
 
-/// The chrome around a code block (also used by code artifacts).
 struct CodeBlockFrame<Content: View>: View {
     let language: String?
     let copy: () -> Void
@@ -152,7 +136,7 @@ struct CodeBlockFrame<Content: View>: View {
                 .accessibilityLabel(copied ? "Copied" : "Copy code")
                 #if os(iOS)
                 .frame(minHeight: 44).contentShape(Rectangle())
-                .padding(.vertical, -10) // 44pt hit area inside the same header height
+                .padding(.vertical, -10)
                 #endif
             }
             .padding(.horizontal, 12)

@@ -1,21 +1,15 @@
 import Foundation
 
-// Thread endpoints the chat top bar and the thread panel use: rename / switch agent,
-// token usage, file count, sources and linked memories.
-
-/// GET /api/threads/{id}/tokens/
 struct ThreadTokenUsage: Decodable, Hashable {
     var prompt_tokens = 0
     var completion_tokens = 0
     var total_tokens = 0
 }
 
-/// GET /api/threads/{id}/file-meta/
 struct ThreadFileMeta: Decodable, Hashable {
     var file_count = 0
 }
 
-/// One source from GET /api/threads/{id}/sources/ (a CitedSource dump, see the web lib/citations.ts).
 struct ThreadSource: Decodable, Hashable, Identifiable {
     let key: String
     let title: String
@@ -44,7 +38,6 @@ struct ThreadSource: Decodable, Hashable, Identifiable {
     }
 }
 
-/// GET /api/memories/thread/{id} (knowledge bases linked to the thread).
 struct ThreadMemory: Decodable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -62,7 +55,6 @@ extension API {
         try await expectOK("PATCH", "/api/threads/\(id)/", body: ["title": title])
     }
 
-    /// Switches the thread to another agent; the server moves linked memories along.
     func setThreadAgent(_ id: String, agent: String) async throws {
         try await expectOK("PATCH", "/api/threads/\(id)/", body: ["agent_id": agent])
     }
@@ -84,7 +76,6 @@ extension API {
         try await json([ThreadMemory].self, "GET", "/api/memories/thread/\(id)")
     }
 
-    /// Rebuilds the agent's RAG index (one memory, or all of the agent's).
     func reindexAgent(_ agent: String, memory: String? = nil, force: Bool) async throws {
         var path = "/api/agents/\(agent)/reindex/?force_rebuild=\(force)"
         if let memory { path += "&memory_id=\(memory)" }

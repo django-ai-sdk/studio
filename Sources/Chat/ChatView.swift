@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// Chat screen, laid out like the web app: an empty chat shows a centered greeting with the
-/// composer in the middle of the window; once there are messages they scroll in a centered
-/// column underneath a floating composer at the bottom. Files dropped anywhere attach.
-/// Message rendering lives in MessageView.swift, input in Composer.swift.
 struct ChatView: View {
     @Environment(ChatStore.self) private var chat
     @Environment(AppStore.self) private var app
@@ -15,13 +11,10 @@ struct ChatView: View {
     private var isHome: Bool { chat.messages.isEmpty && !chat.loading }
 
     @State private var panel = ThreadPanelState()
-    /// Whether the conversation follows new content (the user is at the bottom).
     @State private var pinnedToBottom = true
-    /// Height of the floating composer bar, which the conversation scrolls clear of.
     @State private var barHeight: CGFloat = 120
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
-    /// iPhone (and narrow iPad multitasking): tighter side margins.
     private var compact: Bool { sizeClass == .compact }
     #else
     private let compact = false
@@ -49,9 +42,7 @@ struct ChatView: View {
                 attachments.threadDidChange(to: id)
                 panel.citation = nil
             }
-            // Outermost, so the toolbar, alerts and sheets below also get the panel.
             .environment(panel)
-            // Lets the View menu (StudioCommands) switch panel tabs.
             .focusedSceneValue(\.threadPanel, panel)
     }
 
@@ -61,13 +52,8 @@ struct ChatView: View {
         return title.isEmpty ? "Untitled" : title
     }
 
-    // MARK: Top bar
-
-    /// Web TopBar: the thread's title and agent (window title/subtitle), a toggle per panel tab
-    /// and the thread's actions.
     @ToolbarContentBuilder private var topBar: some ToolbarContent {
         #if os(iOS)
-        // No window subtitle on iOS: the agent's name sits under the title.
         ToolbarItem(placement: .principal) {
             VStack(spacing: 0) {
                 Text(title).font(.headline).lineLimit(1)
@@ -78,7 +64,6 @@ struct ChatView: View {
             .accessibilityElement(children: .combine)
         }
         #endif
-        // A new chat has no thread yet, so nothing for the panels to show.
         if let id = chat.threadID {
             ToolbarItem(placement: .primaryAction) {
                 ThreadPanelToggles()
@@ -104,8 +89,6 @@ struct ChatView: View {
         .animation(.easeOut(duration: 0.15), value: dropTargeted)
     }
 
-    // MARK: New chat
-
     private static let starters = [
         "What's the weather like today?",
         "Help me write an email",
@@ -115,7 +98,6 @@ struct ChatView: View {
 
     private var home: some View {
         VStack(spacing: 24) {
-            // The agent is picked in the composer's agent menu.
             Text("What can I help you with today?")
                 .font(.title.weight(.medium))
                 .multilineTextAlignment(.center)
@@ -143,9 +125,6 @@ struct ChatView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Conversation
-
-    /// Space between the last message and the composer's top edge once scrolled to the bottom.
     private static let bottomGap: CGFloat = 40
     private static let bottomID = "conversation-bottom"
 
@@ -159,8 +138,6 @@ struct ChatView: View {
                         MessageView(message: message, streaming: chat.streaming && isLast, isLast: isLast)
                             .id(message.id)
                     }
-                    // Scroll target below the last message, so scrolling to the bottom keeps the gap.
-                    // The composer floats over the scroll view, so this also clears its height.
                     Color.clear.frame(height: barHeight + Self.bottomGap - 32).id(Self.bottomID)
                 }
                 .padding(.horizontal, sideMargin)
@@ -168,14 +145,10 @@ struct ChatView: View {
                 .frame(maxWidth: Self.columnWidth)
                 .frame(maxWidth: .infinity)
             }
-            // No .defaultScrollAnchor(.bottom): on macOS 26 it draws a hairline across the chat.
-            // Landing at the bottom is done by scrollTo after history loads (see onChange(of: loading)).
             .onScrollGeometryChange(for: ScrollMetrics.self) { g in
                 ScrollMetrics(contentHeight: g.contentSize.height,
                               distanceToBottom: g.contentSize.height - g.visibleRect.maxY)
             } action: { old, new in
-                // Growing content (a streaming reply, rows sizing lazily) doesn't unpin; only the
-                // user scrolling does. While pinned, follow the growth so the end stays in view.
                 guard old.contentHeight == new.contentHeight else {
                     if new.distanceToBottom < 40 { pinnedToBottom = true }
                     else if pinnedToBottom { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
@@ -189,15 +162,11 @@ struct ChatView: View {
             .scrollDismissesKeyboard(.interactively)
             #endif
             .contentMargins(.bottom, barHeight, for: .scrollIndicators)
-            // An overlay rather than a bottom safe-area inset, so messages pass softly behind the
-            // fade and the glass composer; the spacer above keeps the last one clear of it.
             .overlay(alignment: .bottom) {
                 bottomBar(proxy)
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { barHeight = $0 }
             }
             .onChange(of: chat.messages.count) { old, new in
-                // Sending a message always brings the conversation back down. Growth of the
-                // streaming reply is followed by the scroll-geometry handler above.
                 if chat.streaming, new > old {
                     pinnedToBottom = true
                     proxy.scrollTo(Self.bottomID, anchor: .bottom)
@@ -205,11 +174,8 @@ struct ChatView: View {
             }
             .onChange(of: chat.threadID) { pinnedToBottom = true }
             .onChange(of: chat.loading) { _, loading in
-                // A thread's history just arrived: land on its end once the lazy rows have sized.
                 guard !loading else { return }
                 pinnedToBottom = true
-                // Lazy rows above the end (long markdown, tables) size late and move it; keep
-                // re-landing for a moment, unless the user has scrolled away in the meantime.
                 Task {
                     for i in 0..<8 {
                         if i >= 3 && !pinnedToBottom { break }
@@ -227,8 +193,6 @@ struct ChatView: View {
         var distanceToBottom: CGFloat
     }
 
-    /// Floating composer over the scrolling messages; the window background fades in just above
-    /// its top edge so the footnote stays legible. The scroll-to-bottom button floats above it.
     private func bottomBar(_ proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 8) {
             errorLabel
@@ -242,8 +206,6 @@ struct ChatView: View {
         .frame(maxWidth: Self.columnWidth)
         .frame(maxWidth: .infinity)
         .background(alignment: .bottom) {
-            // Starts a little above the composer so text scrolling under it dissolves instead of
-            // being cut off; at rest the last message sits above the fade (see bottomGap).
             LinearGradient(stops: [.init(color: .clear, location: 0),
                                    .init(color: Self.windowBackground, location: 0.3)],
                            startPoint: .top, endPoint: .bottom)
@@ -283,7 +245,6 @@ struct ChatView: View {
     }
 }
 
-/// Round "jump to latest" button above the composer (Messages / ChatGPT style).
 private struct ScrollToBottomButton: View {
     let action: () -> Void
 

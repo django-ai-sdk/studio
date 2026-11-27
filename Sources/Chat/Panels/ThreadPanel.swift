@@ -3,10 +3,6 @@ import AppKit
 #endif
 import SwiftUI
 
-/// Tabs of the thread side panel (mirrors the web app's ThreadPanel: Insights, Trace, Sources, Agent),
-/// plus Browser, the embedded page web links in the thread open in (only offered while one is open).
-/// The shell (top bar toggles, split view, full width, link routing) is `ThreadPanelSplit` below;
-/// ChatView puts the toggles in its toolbar (`ThreadPanelToggles`). Each tab is its own view.
 enum ThreadPanelTab: String, CaseIterable, Identifiable {
     case insights, trace, sources, agent, browser
 
@@ -32,13 +28,11 @@ enum ThreadPanelTab: String, CaseIterable, Identifiable {
         }
     }
 
-    /// ⌥⌘1…5
     var shortcut: KeyEquivalent {
         KeyEquivalent(Character(String((Self.allCases.firstIndex(of: self) ?? 0) + 1)))
     }
 }
 
-/// Content for one tab. `threadID` is nil on a new chat (no thread yet).
 struct ThreadPanelContent: View {
     let tab: ThreadPanelTab
     let threadID: String?
@@ -57,10 +51,6 @@ struct ThreadPanelContent: View {
     }
 }
 
-// MARK: Toolbar toggles
-
-/// One toggle per tab for the chat's toolbar; pressing the open tab closes the panel.
-/// On iPhone (compact width) they collapse into one menu button.
 struct ThreadPanelToggles: View {
     @Environment(ThreadPanelState.self) private var panel
     #if os(iOS)
@@ -104,14 +94,6 @@ struct ThreadPanelToggles: View {
     }
 }
 
-// MARK: Split
-
-/// The chat (`main`) and the open panel side by side with a draggable divider; the panel's width
-/// is remembered. In full width the chat column hides and the panel fills the detail area.
-///
-/// Web links opened anywhere inside (answer markdown, source chips, the Sources tab — anything
-/// using the `openURL` environment action) load in the panel's Browser tab, so the reader stays
-/// in the thread. ⌘-click and other schemes go to the system as usual.
 #if os(macOS)
 struct ThreadPanelSplit<Main: View>: View {
     let threadID: String?
@@ -140,7 +122,6 @@ struct ThreadPanelSplit<Main: View>: View {
                 }
             }
         }
-        // Reduce Motion: no slide, and the panel appears/resizes without animating.
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: panel.isOpen)
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: panel.full)
         .environment(\.openURL, OpenURLAction { url in
@@ -150,7 +131,6 @@ struct ThreadPanelSplit<Main: View>: View {
             panel.openWeb(url)
             return .handled
         })
-        // The page belongs to the thread it was opened from.
         .onChange(of: threadID) { old, _ in
             if old != nil { panel.closeBrowser() }
         }
@@ -185,17 +165,12 @@ struct ThreadPanelSplit<Main: View>: View {
     }
 }
 #else
-/// iOS: the chat stays put and the panel is presented over it — an inspector column on iPad
-/// (regular width), a sheet with medium/large detents on iPhone. Full width is the large detent
-/// on iPhone and a full screen cover on iPad. Web links route to the panel's Browser tab, as on
-/// the Mac (there's no ⌘-click; the link menu offers the default browser).
 struct ThreadPanelSplit<Main: View>: View {
     let threadID: String?
     @ViewBuilder var main: Main
 
     @Environment(ThreadPanelState.self) private var panel
     @Environment(\.horizontalSizeClass) private var sizeClass
-    // Presented content doesn't reliably inherit the environment; re-inject what the tabs read.
     @Environment(AppStore.self) private var app: AppStore?
     @Environment(ChatStore.self) private var chat: ChatStore?
 
@@ -209,7 +184,6 @@ struct ThreadPanelSplit<Main: View>: View {
             .sheet(isPresented: presented(compact)) {
                 content
                     .presentationDetents([.medium, .large], selection: detent)
-                    // The chat behind stays inert: its toolbar toggles would otherwise fight the sheet.
                     .presentationBackgroundInteraction(.disabled)
                     .presentationContentInteraction(.scrolls)
                     .presentationDragIndicator(.visible)
@@ -241,22 +215,16 @@ struct ThreadPanelSplit<Main: View>: View {
         }
     }
 
-    /// Shown while a tab is open and `condition` holds; dismissing (swipe down, …) closes the panel.
     private func presented(_ condition: Bool) -> Binding<Bool> {
         Binding(get: { panel.isOpen && condition }, set: { if !$0 && condition { panel.close() } })
     }
 
-    /// iPhone: the large detent is "full width".
     private var detent: Binding<PresentationDetent> {
         Binding(get: { panel.full ? .large : .medium }, set: { panel.full = $0 == .large })
     }
 }
 #endif
 
-// MARK: Panel
-
-/// The docked panel: a header (tab, full width, close) over the tab's content, on an
-/// inspector-like background.
 struct ThreadPanelView: View {
     let tab: ThreadPanelTab
     let threadID: String?
@@ -277,7 +245,6 @@ struct ThreadPanelView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Thread details: \(tab.title)")
         .background {
-            // Esc leaves full width (web: same).
             if panel.full {
                 Button("Exit Full Width") { panel.full = false }
                     .keyboardShortcut(.cancelAction)
@@ -306,12 +273,10 @@ struct ThreadPanelView: View {
     static let buttonSize: CGFloat = 22
     static let headerHeight: CGFloat = 40
     #else
-    /// 44 pt hit area (HIG); the borderless glyph looks the same size.
     static let buttonSize: CGFloat = 44
     static let headerHeight: CGFloat = 52
     #endif
 
-    /// The tab's name; on iOS a menu to switch tabs (the toolbar may be covered by the sheet).
     @ViewBuilder private var title: some View {
         let label = Label(tab.title, systemImage: tab.systemImage)
             .font(.headline)
@@ -336,7 +301,6 @@ struct ThreadPanelView: View {
         #endif
     }
 
-    /// Full width and close; on the Browser tab, close also closes the page.
     private var chromeButtons: some View {
         Group {
             Button {
@@ -363,7 +327,6 @@ struct ThreadPanelView: View {
 }
 
 #if os(macOS)
-/// The window's sidebar material behind the panel, so it reads as an inspector column.
 private struct PanelMaterial: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -377,9 +340,6 @@ private struct PanelMaterial: NSViewRepresentable {
 }
 #endif
 
-// MARK: Shared panel bits
-
-/// Friendly empty state for a tab on a new chat.
 struct PanelNoThread: View {
     let tab: ThreadPanelTab
 
@@ -402,7 +362,6 @@ struct PanelNoThread: View {
     }
 }
 
-/// "31.4K" token counts.
 func formatTokens(_ n: Int) -> String {
     n >= 1000 ? (Double(n) / 1000).formatted(.number.precision(.fractionLength(n >= 10_000 ? 0 : 1))) + "K" : "\(n)"
 }

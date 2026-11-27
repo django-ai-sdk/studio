@@ -1,11 +1,8 @@
 import Foundation
 import Observation
 
-/// State of the workflows screen: the workflow list, the selected workflow's recent runs,
-/// and the run being followed (polled until it settles, like the web app does).
 @Observable @MainActor
 final class WorkflowsModel {
-    /// Set by the view; `api` is read from it on every call so a server change applies.
     @ObservationIgnored weak var store: AppStore?
     private var api: API? { store?.api }
     var workflows: [WorkflowItem] = []
@@ -17,12 +14,9 @@ final class WorkflowsModel {
     var selectedRunID: String? {
         didSet { if selectedRunID != oldValue { run = runs.first { $0.id == selectedRunID } } }
     }
-    /// Detail of the selected run (with steps), refreshed by `follow`.
     var run: WorkflowRun?
-    /// Bumped after an action on a run so the view restarts `follow` without waiting out a sleep.
     var pollGeneration = 0
     var busy = false
-    /// Last failure, shown inline with a retry (`refresh`).
     var error: String?
 
     var selected: WorkflowItem? { workflows.first { $0.id == selectedID } }
@@ -44,7 +38,6 @@ final class WorkflowsModel {
         loaded = true
     }
 
-    /// Retry after an error: reloads the list and runs and restarts following the open run.
     func refresh() async {
         error = nil
         await load()
@@ -72,7 +65,6 @@ final class WorkflowsModel {
         }
     }
 
-    /// Polls the run until it settles (or the view stops following it).
     func follow(_ id: String) async {
         while !Task.isCancelled {
             guard let api else { return }

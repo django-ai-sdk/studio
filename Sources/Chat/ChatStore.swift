@@ -1,6 +1,5 @@
 import Foundation
 
-/// State of the open chat. Views read it; the composer and message views call its methods.
 @Observable @MainActor
 final class ChatStore {
     let app: AppStore
@@ -10,28 +9,19 @@ final class ChatStore {
     var streaming = false
     var loading = false
     var error: String?
-    /// Text of a message that could not be sent (thread creation failed, or Stop before it went
-    /// out); the composer puts it back in its field and sets this to nil.
     var restoredDraft: String?
-    /// The open thread whose history failed to load; `retry()` loads it again.
     private(set) var failedThreadID: String?
 
     var canRetry: Bool { failedThreadID != nil && failedThreadID == threadID }
 
     @ObservationIgnored private var task: Task<Void, Never>?
-    /// Bumped per send and by `stop()`: a stream task only touches state while it still owns it.
     @ObservationIgnored private var generation = 0
-    /// Bumped whenever another chat is shown: work started for the previous one must not land here.
     @ObservationIgnored private var session = 0
-    /// Thread creation in flight, shared by concurrent `ensureThread()` callers (send + uploads).
     @ObservationIgnored private var creating: Task<String, Error>?
-    /// The optimistic user message until the request goes out (removed again if it never does).
     @ObservationIgnored private var unsent: (id: String, text: String)?
-    /// The streaming reply, ahead of `messages`: events fold in here and are published throttled.
     @ObservationIgnored private var reply: ChatMessage?
     @ObservationIgnored private var lastPublish: ContinuousClock.Instant?
     @ObservationIgnored private var flushTask: Task<Void, Never>?
-    /// ~20 view updates per second while streaming; finish/abort/error publish at once.
     private static let publishInterval = Duration.milliseconds(50)
 
     init(app: AppStore) { self.app = app }
@@ -70,22 +60,18 @@ final class ChatStore {
             messages = history
             loading = false
         } catch {
-            // A newer open/newChat owns `loading` now.
             guard self.session == session else { return }
             loading = false
-            // Keep the thread selected, but let open(id) / retry() load it again.
             failedThreadID = id
             if !Self.isCancellation(error) { self.error = error.localizedDescription }
         }
     }
 
-    /// Loads the open thread again after its history failed to load.
     func retry() async {
         guard let id = failedThreadID, id == threadID else { return }
         await open(id)
     }
 
-    /// The open thread's id, creating the thread first for a new chat (uploads need one).
     func ensureThread() async throws -> String {
         if let threadID { return threadID }
         let session = session
@@ -99,7 +85,6 @@ final class ChatStore {
         }
         defer { if creating == creation { creating = nil } }
         let id = try await creation.value
-        // Stopped, or another chat was opened meanwhile: don't hijack its navigation.
         try Task.checkCancellation()
         guard self.session == session else { throw CancellationError() }
         if let threadID { return threadID }
@@ -108,7 +93,6 @@ final class ChatStore {
         return id
     }
 
-    /// Sends a user message. `attachments` are extra UIMessage parts, e.g. `{"type":"file",…}`.
     func send(_ text: String, attachments: [JSON] = []) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !attachments.isEmpty, !streaming else { return }
@@ -119,7 +103,6 @@ final class ChatStore {
         restoredDraft = nil
         var parts = attachments
         if !text.isEmpty { parts.append(.object(["type": .string("text"), "text": .string(text)])) }
-        // Shown at once; removed again (text back in the composer) if it can't be sent.
         let userMessage = ChatMessage(id: UUID().uuidString, role: "user", parts: parts)
         messages.append(userMessage)
         unsent = (userMessage.id, text)
@@ -141,11 +124,9 @@ final class ChatStore {
                     try self.receive(event, token: token)
                 }
                 guard generation == token else { return }
-                // The stream ended without `finish`: still close open parts.
                 closeReply(.object(["type": .string("finish")]))
                 try? await app.refreshThreads()
             } catch {
-                // stop() / another chat already closed the reply.
                 guard generation == token else { return }
                 if unsent != nil { unsend() }
                 closeReply(.object(["type": .string("abort")]))
@@ -154,7 +135,6 @@ final class ChatStore {
         }
     }
 
-    /// Stops the reply: it ends at once with "Stopped"; a message not sent yet goes back to the composer.
     func stop() {
         task?.cancel()
         task = nil
@@ -163,8 +143,6 @@ final class ChatStore {
         closeReply(.object(["type": .string("abort")]))
         streaming = false
     }
-
-    // MARK: Streaming
 
     private func receive(_ event: JSON, token: Int) throws {
         guard generation == token else { throw CancellationError() }
@@ -177,7 +155,6 @@ final class ChatStore {
         }
     }
 
-    /// Publishes now if the last publish is old enough, else once the interval has passed.
     private func schedulePublish() {
         guard let last = lastPublish, ContinuousClock.now - last < Self.publishInterval else {
             publishReply()
@@ -199,7 +176,6 @@ final class ChatStore {
         if messages[i] != reply { messages[i] = reply }
     }
 
-    /// Applies a closing event (if any) to the streaming reply, publishes it and lets it go.
     private func closeReply(_ event: JSON?) {
         guard reply != nil else { return }
         if let event { try? StreamReducer.apply(event, to: &reply!) }
@@ -208,7 +184,6 @@ final class ChatStore {
         lastPublish = nil
     }
 
-    /// Takes the optimistic user message back out and returns its text to the composer.
     private func unsend() {
         guard let unsent else { return }
         self.unsent = nil

@@ -1,15 +1,11 @@
 import SwiftUI
 
-/// Insights tab of the thread panel: for each answer in the thread, what oversight
-/// made of it (web: thread-panel/InsightsTab.tsx). The newest turn is open with its
-/// pipeline; earlier turns are one line each and load their record when opened.
 struct InsightsTab: View {
     let threadID: String?
 
     @Environment(AppStore.self) private var store
     @Environment(ChatStore.self) private var chat
     @State private var model = InsightsModel()
-    /// Bumped to reload: after a reply finishes streaming, or from the refresh button.
     @State private var generation = 0
 
     private struct LoadKey: Hashable { let thread: String?; let generation: Int }
@@ -62,7 +58,6 @@ struct InsightsTab: View {
     }
 }
 
-/// The thread's turns as cards, newest first.
 private struct InsightsList: View {
     let model: InsightsModel
     let api: API

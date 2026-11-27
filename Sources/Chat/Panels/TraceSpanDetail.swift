@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A selected span: error, timing, model and token usage, then input, output and raw attributes.
 struct TraceSpanDetail: View {
     let node: TraceNode
     let layout: TraceLayout
@@ -94,7 +93,6 @@ struct TraceSpanDetail: View {
     }
 }
 
-/// Titled, pretty-printed JSON: monospaced, selectable, scrolls when long, with a copy button.
 private struct TraceCodeSection: View {
     let title: String
     let json: JSON

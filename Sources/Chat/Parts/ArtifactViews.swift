@@ -3,8 +3,6 @@ import AppKit
 #endif
 import SwiftUI
 
-/// An `artifact_*` tool call rendered natively (web: ArtifactRenderer.tsx): a card with the
-/// artifact's kind and title, its content inline, and an "Open" button that shows it in a sheet.
 struct ArtifactView: View {
     let part: JSON
     @State private var presented = false
@@ -134,7 +132,6 @@ struct ArtifactKind {
     }
 }
 
-/// The artifact's content. `compact` limits long content inline; the sheet shows all of it.
 private struct ArtifactBody: View {
     let name: String
     let part: JSON
@@ -194,8 +191,6 @@ private struct ArtifactBody: View {
     }
 }
 
-// MARK: Bodies
-
 private struct PlanBody: View {
     let args: JSON
 
@@ -230,7 +225,6 @@ private struct PlanBody: View {
     }
 }
 
-/// Status symbol for plan todos, progress steps and test cases.
 struct StatusSymbol: View {
     let status: String
     var body: some View {
@@ -347,7 +341,6 @@ private struct ImageBody: View {
     @Environment(AppStore.self) private var app: AppStore?
 
     var body: some View {
-        // Inline images are decoded once (InlineImageCache), never per render.
         if let b64 = args["base64"]?.string, !b64.isEmpty {
             inline(b64, label: args["alt"]?.string ?? "Generated image")
         } else if let string = args["url"]?.string, string.hasPrefix("data:") {

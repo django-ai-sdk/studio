@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One turn: its prompt, totals and the span waterfall.
 struct TraceTurnCard: View {
     let turn: TraceTurn
     let layout: TraceLayout
@@ -104,7 +103,6 @@ struct TraceTurnCard: View {
         return "\(p.formatted()) prompt · \(c.formatted()) completion"
     }
 
-    /// Depth-first, skipping children of collapsed spans.
     private var rows: [TraceNode] {
         var out: [TraceNode] = []
         func walk(_ nodes: [TraceNode]) {
@@ -124,7 +122,6 @@ struct TraceTurnCard: View {
     }
 }
 
-/// Start and end time above the timeline column (plus quarter marks when wide).
 private struct TraceAxis: View {
     let total: Double
     let layout: TraceLayout
@@ -153,7 +150,6 @@ private struct TraceAxis: View {
     }
 }
 
-/// One span: tree disclosure, kind icon, name, (model and tokens when wide), duration, timeline bar.
 struct TraceSpanRow: View {
     let node: TraceNode
     let layout: TraceLayout
@@ -240,7 +236,6 @@ struct TraceSpanRow: View {
     }
 }
 
-/// The span's slice of its turn's timeline.
 private struct TraceBar: View {
     let node: TraceNode
     let color: Color
@@ -275,7 +270,6 @@ extension TraceSpanKind {
     }
 }
 
-/// Icon tight against its text, for metadata rows.
 struct TraceCompactLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 3) {
@@ -285,7 +279,6 @@ struct TraceCompactLabelStyle: LabelStyle {
     }
 }
 
-/// Wraps its children onto new lines when they don't fit.
 struct TraceFlow: Layout {
     var spacing: CGFloat = 8
     var lineSpacing: CGFloat = 4

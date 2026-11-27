@@ -3,27 +3,15 @@ import AppKit
 #endif
 import WebKit
 
-/// One embedded web page in the thread panel (the Browser tab): its page, back/forward history
-/// and load state. `ThreadPanelState.openWeb(_:)` creates it lazily and loads links into it, so
-/// every link opened from the thread pushes onto the same history.
-///
-/// On macOS/iOS 26 it drives a SwiftUI `WebPage` (shown with `WebView`); before (macOS 15, iOS 18–25) a `WKWebView`
-/// whose state is mirrored through KVO (shown with `LegacyWebView`). Views only read the
-/// properties below and call the actions, whichever engine runs.
 @Observable @MainActor
 final class BrowserSession {
-    /// What the page failed to load with (shown over the page); cleared by the next load.
     private(set) var error: String?
-    /// The URL last asked for, shown until the page reports its own.
     private(set) var requestedURL: URL
 
-    /// `WebPage` on macOS 26, `WKWebView` before (stored properties can't be availability-gated).
     @ObservationIgnored private let engine: AnyObject
     @ObservationIgnored private var legacyDelegate: LegacyDelegate?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
-    /// Follows the current navigation's events (macOS/iOS 26); replaced by the next navigation.
     @ObservationIgnored private var navigationTask: Task<Void, Never>?
-    /// KVO mirror of the `WKWebView` state (macOS 15 only).
     private var snapshot = Snapshot()
 
     private struct Snapshot {
@@ -36,7 +24,6 @@ final class BrowserSession {
         var secure = false
     }
 
-    /// Mobile/desktop sites look for "Safari" in the user agent; without it some serve a degraded page.
     private static let applicationName = "Version/26.0 Safari/605.1.15"
 
     init(url: URL) {
@@ -61,11 +48,8 @@ final class BrowserSession {
         load(url)
     }
 
-    // MARK: State
-
     @available(macOS 26, iOS 26, *)
     var page: WebPage { engine as! WebPage }
-    /// The macOS 15 engine; nil on macOS 26.
     var webView: WKWebView? { engine as? WKWebView }
 
     var url: URL? {
@@ -83,7 +67,6 @@ final class BrowserSession {
         return snapshot.isLoading
     }
 
-    /// 0…1
     var progress: Double {
         if #available(macOS 26, iOS 26, *) { return page.estimatedProgress }
         return snapshot.progress
@@ -99,20 +82,16 @@ final class BrowserSession {
         return snapshot.canGoForward
     }
 
-    /// https with no insecure subresources (Safari's lock).
     var isSecure: Bool {
         guard url?.scheme?.lowercased() == "https" else { return false }
         if #available(macOS 26, iOS 26, *) { return page.hasOnlySecureContent }
         return snapshot.secure
     }
 
-    /// "example.com" without "www.".
     var host: String {
         guard let host = url?.host(), !host.isEmpty else { return url?.absoluteString ?? "" }
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
-
-    // MARK: Actions
 
     func load(_ url: URL) {
         error = nil
@@ -155,14 +134,12 @@ final class BrowserSession {
         if #available(macOS 26, iOS 26, *) { page.stopLoading() } else { webView?.stopLoading() }
     }
 
-    /// The page is going away: stops loading and stops following the navigation.
     func close() {
         navigationTask?.cancel()
         navigationTask = nil
         stop()
     }
 
-    /// The page in the user's default browser.
     func openInDefaultBrowser() {
         if let url { Platform.openExternally(url) }
     }
@@ -179,10 +156,6 @@ final class BrowserSession {
         #endif
     }
 
-    // MARK: Navigation policy (both engines)
-
-    /// Links opened from inside the page: ⌘-click and non-web schemes (mailto:, …) go to the
-    /// system; target=_blank / window.open load here instead of a new window.
     fileprivate func decide(url: URL?, isLink: Bool, newWindow: Bool, commandKey: Bool) -> Bool {
         guard let url else { return true }
         let scheme = url.scheme?.lowercased() ?? ""
@@ -197,7 +170,6 @@ final class BrowserSession {
         return true
     }
 
-    /// Responses WebKit can't show (downloads, archives) open in the default browser instead.
     fileprivate func decide(response: URLResponse, canShow: Bool, isMainFrame: Bool) -> Bool {
         guard !canShow, isMainFrame, let url = response.url else { return true }
         Platform.openExternally(url)
@@ -206,13 +178,10 @@ final class BrowserSession {
 
     fileprivate func fail(_ error: Error) {
         let ns = error as NSError
-        // Superseded loads and policy cancels (⌘-click, downloads handed off) aren't failures.
         if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return }
         if ns.domain == "WebKitErrorDomain" && ns.code == 102 { return }
         self.error = ns.localizedDescription
     }
-
-    // MARK: Engines
 
     @available(macOS 26, iOS 26, *)
     private func track(_ events: some AsyncSequence<WebPage.NavigationEvent, any Error>) {
@@ -239,7 +208,7 @@ final class BrowserSession {
             #if os(macOS)
             let command = NSApp.currentEvent?.modifierFlags.contains(.command) ?? false
             #else
-            let command = false // ⌘-click is a Mac affordance
+            let command = false
             #endif
             let allow = box.session?.decide(url: action.request.url, isLink: action.navigationType == .linkActivated,
                                             newWindow: action.target == nil, commandKey: command) ?? true
@@ -247,7 +216,6 @@ final class BrowserSession {
         }
 
         func decidePolicy(for response: WebPage.NavigationResponse) async -> WKNavigationResponsePolicy {
-            // NavigationResponse doesn't say which frame; only top-level documents reach here unshowable.
             let allow = box.session?.decide(response: response.response, canShow: response.canShowMimeType,
                                             isMainFrame: true) ?? true
             return allow ? .allow : .cancel

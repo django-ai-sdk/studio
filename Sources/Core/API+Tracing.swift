@@ -1,7 +1,5 @@
 import Foundation
 
-/// One recorded span (`TraceOut`): an agent run, step, LLM call, tool call, pipeline component…
-/// `tags` keep Haystack's raw attributes (`haystack.tool.name`, `haystack.tool.error`, …).
 struct TraceSpanOut: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let operation_name: String
@@ -20,7 +18,6 @@ struct TraceSpanOut: Decodable, Identifiable, Hashable, Sendable {
     let tags: [String: JSON]?
 }
 
-/// Token totals over a set of spans, with a breakdown per subagent id.
 struct TraceTokenUsage: Decodable, Hashable, Sendable {
     var prompt_tokens: Int?
     var completion_tokens: Int?
@@ -29,8 +26,6 @@ struct TraceTokenUsage: Decodable, Hashable, Sendable {
     var by_subagent: [String: TraceTokenUsage]?
 }
 
-/// The cost-bearing fields of an oversight turn record (`TurnOut`); only present when the
-/// backend mounts the oversight API.
 struct TraceTurnCost: Decodable, Hashable, Sendable {
     let id: String
     let created_at: String
@@ -41,8 +36,6 @@ struct TraceTurnCost: Decodable, Hashable, Sendable {
 }
 
 extension API {
-    /// Every span of a thread. The endpoint pages by 100 (newest first), so keep asking until a
-    /// short page; `maxPages` bounds very long threads.
     func threadTraces(thread: String, maxPages: Int = 20) async throws -> [TraceSpanOut] {
         struct R: Decodable { let traces: [TraceSpanOut] }
         let limit = 100
@@ -68,7 +61,6 @@ extension API {
         try await json(TraceTokenUsage.self, "GET", "/api/messages/\(message)/tokens/")
     }
 
-    /// Per-turn cost from the oversight feed. Returns nil when oversight isn't mounted (404) or fails.
     func threadTurnCosts(thread: String) async -> [TraceTurnCost]? {
         struct R: Decodable { let items: [TraceTurnCost] }
         return try? await json(R.self, "GET", "/api/oversight/turns/?thread_id=\(thread)&limit=100").items

@@ -6,10 +6,6 @@ import UIKit
 #endif
 import SwiftUI
 
-/// Floating message input: attachment tray, multi-line field, attach button, agent menu, send/stop.
-/// macOS: Return sends, Shift/Option-Return adds a line; files can be pasted or dropped.
-/// iOS: Return adds a line, the Send button (or ⌘Return on a hardware keyboard) sends; the attach
-/// menu offers Photos, Files and pasting an image; files can be dropped on iPad.
 struct Composer: View {
     @Environment(ChatStore.self) private var chat
     @Environment(AppStore.self) private var app
@@ -89,7 +85,6 @@ struct Composer: View {
         #endif
         .task { await attachments.loadSettings(api: chat.api) }
         .onChange(of: chat.restoredDraft, initial: true) { _, restored in
-            // A message that couldn't be sent comes back into the field (ahead of anything typed since).
             guard let restored else { return }
             draft = draft.isEmpty ? restored : restored + "\n" + draft
             chat.restoredDraft = nil
@@ -114,7 +109,6 @@ struct Composer: View {
                 }
             }
         } label: {
-            // 44pt hit area around the 17pt glyph; the negative padding keeps the 32pt row.
             Label("Attach", systemImage: "plus")
                 .labelStyle(.iconOnly)
                 .font(.body.weight(.medium))
@@ -180,8 +174,6 @@ struct Composer: View {
     }
 }
 
-/// iOS: widens a button's tap area to 44pt around the system-drawn control without changing
-/// its look or layout; taps on the control itself still go to the inner button.
 private struct HitAreaButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button(configuration)
@@ -193,7 +185,6 @@ private struct HitAreaButtonStyle: PrimitiveButtonStyle {
 }
 
 extension View {
-    /// Filled circular icon button (send/stop) with the system's own enabled/disabled drawing.
     @ViewBuilder fileprivate func prominentCircleButton() -> some View {
         let base = labelStyle(.iconOnly)
             .fontWeight(.bold)
@@ -213,8 +204,6 @@ extension View {
         #endif
     }
 
-    /// Raised rounded surface: Liquid Glass on macOS/iOS 26 (which brings its own depth),
-    /// material + hairline + shadow before.
     @ViewBuilder func composerSurface() -> some View {
         let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
         if #available(macOS 26, iOS 26, *) {
@@ -227,21 +216,13 @@ extension View {
     }
 }
 
-// MARK: - Text view
-
 #if os(iOS)
-/// iOS input with the same interface as the Mac's NSTextView version: a vertical `TextField`
-/// that grows from one to six lines (reporting its height through `height`). Return inserts a
-/// newline; ⌘Return on a hardware keyboard submits. `onPaste` is unused (TextField pastes text
-/// itself; images come in through the composer's attach menu). `placeholder` is the field's
-/// title, so VoiceOver reads it too. The text follows Dynamic Type (17pt at the default size).
 struct ComposerTextView: View {
     static let maxLines = 6
 
     @Binding var text: String
     @Binding var height: CGFloat
     var placeholder: String
-    /// On iPad, focus is taken whenever this changes, e.g. on switching chats.
     var focusKey: String?
     var onSubmit: () -> Void
     var onPaste: (UIPasteboard) -> Bool
@@ -269,7 +250,6 @@ struct ComposerTextView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             .background {
-                // Hardware-keyboard send; a zero-size button keeps the shortcut registered.
                 Button("Send", action: onSubmit)
                     .keyboardShortcut(.return, modifiers: .command)
                     .opacity(0)
@@ -283,15 +263,10 @@ struct ComposerTextView: View {
     }
 }
 #else
-/// NSTextView-backed input: grows from one to eight lines, Return submits (unless composing
-/// with an input method), Shift/Option-Return inserts a newline, pasting files or images goes
-/// to `onPaste`, and file drags fall through to the chat's drop target. `placeholder` shows
-/// while empty and is the field's accessibility label. Text is 14pt, scaled with the text size.
 struct ComposerTextView: View {
     @Binding var text: String
     @Binding var height: CGFloat
     var placeholder: String
-    /// Focus is (re)taken whenever this changes, e.g. on switching chats.
     var focusKey: String?
     var onSubmit: () -> Void
     var onPaste: (NSPasteboard) -> Bool
@@ -430,7 +405,6 @@ final class InputTextView: NSTextView {
         super.paste(sender)
     }
 
-    // Let file drags reach the chat's drop target instead of inserting paths.
     override func updateDragTypeRegistration() { unregisterDraggedTypes() }
 
     override func viewDidMoveToWindow() {

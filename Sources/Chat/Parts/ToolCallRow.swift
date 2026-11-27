@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// A compact, expandable tool call: symbol, humanized name, who ran it (agent handoffs) and its
-/// state (spinner / checkmark / red error). Expanded, it shows input and output.
 struct ToolCallRow: View {
     let part: JSON
     @State private var expanded: Bool
@@ -138,7 +136,6 @@ private struct ToolSection<Content: View>: View {
     }
 }
 
-/// Pretty-printed JSON, monospaced, selectable, scrolling when long.
 struct JSONBlock: View {
     let json: JSON
 

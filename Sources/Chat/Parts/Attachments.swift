@@ -4,7 +4,6 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A file from a `file` part or a file artifact.
 nonisolated struct FileRef: Hashable {
     let url: String?
     let filename: String
@@ -35,8 +34,6 @@ nonisolated struct FileRef: Hashable {
         return UTType(mimeType: mediaType)?.preferredFilenameExtension?.uppercased() ?? "FILE"
     }
 
-
-    /// Absolute URL: data:/http(s) as-is, server-relative paths against the API base.
     static func resolve(_ string: String?, base: URL?) -> URL? {
         guard let string, !string.isEmpty else { return nil }
         if string.hasPrefix("data:") || string.hasPrefix("http://") || string.hasPrefix("https://") {
@@ -46,7 +43,6 @@ nonisolated struct FileRef: Hashable {
     }
 }
 
-/// File parts: image thumbnails (click for a larger preview) and file chips (click to open).
 struct FileChips: View {
     let files: [FileRef]
     var alignment: HorizontalAlignment = .trailing
@@ -60,7 +56,6 @@ struct FileChips: View {
         VStack(alignment: alignment, spacing: 6) {
             if !images.isEmpty {
                 HStack(spacing: 6) {
-                    // Offsets: the same file can be attached twice and rows hold no state.
                     ForEach(Array(images.enumerated()), id: \.offset) { _, file in
                         Button { preview = file } label: { Thumbnail(url: url(file), size: 112) }
                             .buttonStyle(.plain)
@@ -164,10 +159,6 @@ private struct ImagePreview: View {
     }
 }
 
-// MARK: Inline image decoding
-
-/// Decodes base64 / `data:` URL images once per distinct string, off the render path: views show
-/// them through `DecodedImage`, which looks them up in `.task(id:)` rather than in `body`.
 @MainActor
 enum InlineImageCache {
     private static let cache: NSCache<NSString, PlatformImage> = {
@@ -176,7 +167,6 @@ enum InlineImageCache {
         return cache
     }()
 
-    /// The image for a `data:` URL string or a bare base64 string; nil when it doesn't decode.
     static func image(for source: String) -> PlatformImage? {
         let key = source as NSString
         if let hit = cache.object(forKey: key) { return hit }
@@ -192,7 +182,6 @@ enum InlineImageCache {
     }
 }
 
-/// An inline (base64 / `data:`) image, decoded once via `InlineImageCache`.
 struct DecodedImage<Content: View, Placeholder: View>: View {
     let source: String?
     @ViewBuilder let content: (Image) -> Content

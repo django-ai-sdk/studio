@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Icon for a run or step status.
 struct StatusIcon: View {
     let status: String
 
@@ -44,7 +43,6 @@ struct StatusIcon: View {
     }
 }
 
-/// A step or run output: markdown text, or pretty-printed JSON.
 struct OutputValueView: View {
     let value: JSON
 
@@ -69,7 +67,6 @@ struct OutputValueView: View {
     }
 }
 
-/// Live view of one run: status, approval callout, step-by-step progress and the outputs.
 struct RunView: View {
     @Environment(WorkflowsModel.self) private var model
     let run: WorkflowRun
@@ -77,7 +74,6 @@ struct RunView: View {
     @State private var confirmingCancel = false
     @State private var rejecting: StepRun?
 
-    /// Definition steps in order, matched to their step runs; steps the run has not reached are pending.
     private var rows: [(name: String, type: String, step: StepRun?)] {
         let runSteps = run.steps ?? []
         var rows = (workflow?.steps ?? []).map { def -> (String, String, StepRun?) in
@@ -89,7 +85,6 @@ struct RunView: View {
         return rows
     }
 
-    /// The run's declared outputs; when it declares none (the usual case), the last step output.
     private var result: JSON? {
         if let outputs = run.outputs, outputs != .null, outputs.object?.isEmpty != true { return outputs }
         guard run.status == "completed" else { return nil }
@@ -198,7 +193,6 @@ struct RunView: View {
                 HStack {
                     Spacer()
                     Button("Reject…", role: .destructive) { rejecting = step }
-                    // Approve is the default action, on the trailing side (⌘↩ for the first approval).
                     Button("Approve") {
                         Task { await model.decide(run.id, step: step.step_name, approved: true) }
                     }
@@ -225,7 +219,6 @@ private struct StepRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if hasBody {
-                // A real button, so the row works with VoiceOver and the keyboard (not just a tap).
                 Button { withAnimation { expanded.toggle() } } label: {
                     header.contentShape(Rectangle())
                 }
@@ -242,7 +235,6 @@ private struct StepRow: View {
                 if let output = step.output, output != .null { OutputValueView(value: output) }
             }
         }
-        // Open a step's output when it fails, also while the run is being followed.
         .onChange(of: status, initial: true) { _, status in
             if status == "failed" { expanded = true }
         }

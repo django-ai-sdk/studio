@@ -1,6 +1,5 @@
 import Foundation
 
-/// Reading AI SDK UIMessage parts (raw `JSON`) the way the web app's MessageItem does.
 nonisolated enum Part {
     static func type(_ part: JSON) -> String { part["type"]?.string ?? "" }
 
@@ -9,7 +8,6 @@ nonisolated enum Part {
         return t.hasPrefix("tool-") || t == "dynamic-tool"
     }
 
-    /// `artifact_plan_artifact` for `{type:"tool-artifact_plan_artifact"}` or a dynamic tool's `toolName`.
     static func toolName(_ part: JSON) -> String {
         if let name = part["toolName"]?.string { return name }
         let t = type(part)
@@ -21,7 +19,6 @@ nonisolated enum Part {
     static let citationsTool = "artifact_citations_artifact"
     static func isCitations(_ part: JSON) -> Bool { isTool(part) && toolName(part) == citationsTool }
 
-    /// "artifact_plan_artifact" → "Plan", "search_web" → "Search Web".
     static func humanize(_ name: String) -> String {
         var s = name
         if s.hasPrefix("artifact_") { s.removeFirst(9) }
@@ -35,7 +32,6 @@ nonisolated enum Part {
         return !["output-available", "output-error", "output-denied", "denied"].contains(part["state"]?.string ?? "")
     }
 
-    /// Error text of a tool part: `errorText` (AI SDK) or the legacy `output.error*` shapes.
     static func toolError(_ part: JSON) -> String? {
         if part["state"]?.string == "output-error" {
             return friendlyError(part["errorText"]?.string ?? "tool_failed")
@@ -47,7 +43,6 @@ nonisolated enum Part {
         return nil
     }
 
-    /// Error codes (`tool_failed`) as a sentence; anything else is shown as-is.
     static func friendlyError(_ code: String) -> String {
         switch code {
         case "tool_failed": "The tool failed."
@@ -55,8 +50,6 @@ nonisolated enum Part {
         }
     }
 
-    /// The tool's result: `output.result` when wrapped (string results parsed as JSON when they are),
-    /// else the output itself.
     static func toolResult(_ part: JSON) -> JSON? {
         guard let output = part["output"], output != .null else { return nil }
         if let result = output["result"], output.object?.count == 1 || output["origin"] != nil {
@@ -69,8 +62,6 @@ nonisolated enum Part {
         return output
     }
 
-    /// Artifact arguments, like the web ArtifactRenderer: the input when it has keys, else the output
-    /// (unwrapped from `result`).
     static func artifactArgs(_ part: JSON) -> JSON {
         if let input = part["input"], input.object?.isEmpty == false { return input }
         let out = part["output"]
@@ -78,21 +69,17 @@ nonisolated enum Part {
         return out ?? .object([:])
     }
 
-    /// The artifact's output (unwrapped from `result`), where server-filled fields (documentId, files) live.
     static func artifactOutput(_ part: JSON) -> JSON? {
         let out = part["output"]
         if let wrapped = out?["result"], wrapped.object?.isEmpty == false { return wrapped }
         return out
     }
 
-    /// "Research Planner" for a handoff, or the sub-agent that made the call.
     static func agentMarks(_ part: JSON) -> (agent: String?, handoff: String?) {
         let sdk = part["callProviderMetadata"]?["sdk"]
         return (sdk?["agent"]?.string, sdk?["handoff"]?.string)
     }
 
-    /// Keeps one part per toolCallId (the most advanced state), at the first one's position — like
-    /// the web's `deduplicateToolParts`.
     static func dedupTools(_ parts: [JSON]) -> [JSON] {
         let rank = ["output-available": 4, "output-error": 3, "approval-requested": 2, "input-available": 1, "input-streaming": 0]
         var best: [String: (JSON, Int)] = [:]
@@ -115,7 +102,6 @@ nonisolated extension String {
 }
 
 nonisolated extension JSON {
-    /// Short single-line text for a JSON value (strings unquoted).
     var inlineText: String {
         switch self {
         case .string(let s): s
@@ -127,14 +113,11 @@ nonisolated extension JSON {
     }
 }
 
-// MARK: Oversight (`data-oversight` parts), like the web lib/oversight.ts
-
 nonisolated enum Oversight {
     static func notices(_ parts: [JSON]) -> [JSON] {
         parts.filter { Part.type($0) == "data-oversight" }.compactMap { $0["data"] }
     }
 
-    /// The text oversight shows instead of the streamed answer (masked/withheld version or refusal).
     static func replacementText(_ parts: [JSON]) -> String? {
         let ns = notices(parts).reversed()
         if let r = ns.first(where: { $0["replace"]?.string != nil })?["replace"]?.string { return r }
@@ -159,8 +142,6 @@ nonisolated enum Oversight {
         }
     }
 }
-
-// MARK: Citations (the `artifact_citations_artifact` tool part), like the web lib/citations.ts
 
 nonisolated struct Citations {
     struct Source: Identifiable, Hashable {
@@ -212,8 +193,6 @@ nonisolated struct Citations {
 
     func source(_ key: String) -> Source? { sources.first { $0.key == key } }
 
-    /// The answer with a superscript link after each cited part, e.g. `…in 2024.[¹](studio-cite://0)`,
-    /// so the markdown renderer shows tappable markers without us touching its layout.
     func annotate(_ text: String) -> String {
         var inserts: [(String.Index, String)] = []
         for c in citations {
@@ -227,8 +206,6 @@ nonisolated struct Citations {
         return out
     }
 
-    /// Where the citation ends in `text`: by its offsets (Python code points) when they still match
-    /// the quote, else by finding the quote.
     private func end(of c: Citation, in text: String) -> String.Index? {
         let scalars = text.unicodeScalars
         if c.start >= 0, c.end <= scalars.count, c.start < c.end {

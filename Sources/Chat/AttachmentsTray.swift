@@ -13,11 +13,6 @@ typealias ComposerPasteboard = NSPasteboard
 typealias ComposerPasteboard = UIPasteboard
 #endif
 
-/// Files attached to the next message, mirroring the web app: every file (images too) is
-/// uploaded to the thread's files, processed server-side, and once ready rides along with
-/// the next user message as a `file` part whose `providerMetadata.sdk.documentId` names
-/// the thread file. The server decides whether an image goes inline (vision agents) or is
-/// described/searched (RAG). Upload needs a thread, so the first file creates one.
 @Observable @MainActor
 final class AttachmentStore {
     enum State: Equatable {
@@ -40,34 +35,26 @@ final class AttachmentStore {
         let name: String
         let size: Int
         let mimeType: String
-        /// Kept for retries; dropped once the server has the file.
         var data: Data?
         var thumbnail: PlatformImage?
         var state: State = .pending
         var docID: String?
-        /// False when the server already had this file (dedupe): removing the chip keeps it.
         var ownsFile = true
 
         var isImage: Bool { mimeType.hasPrefix("image/") }
     }
 
     private(set) var items: [Item] = []
-    /// Last validation problem ("x.zip: file type not allowed"), shown above the input.
     var notice: String?
     private(set) var settings: UploadSettings?
     private var threadID: String?
     private var threadTask: Task<String, Error>?
-    /// Running upload per item. The token tells a superseded (cancelled) task apart from the
-    /// one that replaced it, so it can neither clear the new handle nor write into the item.
     private var tasks: [UUID: (token: UUID, task: Task<Void, Never>)] = [:]
-    /// Processing polls (1.5 s apart) before giving up: about 3 minutes.
     private static let maxPolls = 120
 
-    /// Any upload still running: sending waits for it.
     var busy: Bool { items.contains { $0.state.inFlight } }
     var hasReady: Bool { items.contains { $0.state == .ready } }
 
-    /// Picker filter from the server's allowed MIME types.
     var allowedContentTypes: [UTType] {
         let types = (settings?.allowed_mime_types ?? []).compactMap { UTType(mimeType: $0) }
             + (settings?.allowed_mime_types.contains("text/markdown") == true ? [UTType(filenameExtension: "md")].compactMap { $0 } : [])
@@ -78,8 +65,6 @@ final class AttachmentStore {
         guard settings == nil else { return }
         settings = try? await api.uploadSettings()
     }
-
-    // MARK: Adding
 
     func add(urls: [URL], chat: ChatStore) {
         for url in urls {
@@ -114,26 +99,21 @@ final class AttachmentStore {
         start(item.id, chat: chat)
     }
 
-    /// Content types the chat accepts as drops.
     static var dropTypes: [UTType] {
         #if os(macOS)
         [.fileURL, .image]
         #else
-        // Files/Photos drags on iPad carry typed data, not file URLs.
         [.fileURL, .image, .data]
         #endif
     }
 
     #if os(macOS)
-    /// Pasteboard → attachments. Returns false when it holds no files or images
-    /// (then the text view pastes text as usual).
     func paste(from pasteboard: NSPasteboard, chat: ChatStore) -> Bool {
         if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
            !urls.isEmpty {
             add(urls: urls, chat: chat)
             return true
         }
-        // Screenshots/copied images; text that also carries an image (rich text) stays text.
         guard pasteboard.string(forType: .string) == nil,
               let image = NSImage(pasteboard: pasteboard),
               let tiff = image.tiffRepresentation,
@@ -143,7 +123,6 @@ final class AttachmentStore {
         return true
     }
     #else
-    /// Pasteboard → attachments (images and file URLs). Returns false when there are none.
     func paste(from pasteboard: UIPasteboard, chat: ChatStore) -> Bool {
         if let urls = pasteboard.urls?.filter(\.isFileURL), !urls.isEmpty {
             add(urls: urls, chat: chat)
@@ -158,7 +137,6 @@ final class AttachmentStore {
         return true
     }
 
-    /// Photos from the photo library picker; HEIC and other formats become JPEG.
     func add(photos: [PhotosPickerItem], chat: ChatStore) {
         let stamp = Self.stamp
         for (i, photo) in photos.enumerated() {
@@ -178,7 +156,6 @@ final class AttachmentStore {
         }
     }
 
-    /// Image bytes in a format the server takes (JPEG/PNG/GIF/WebP kept, the rest re-encoded as JPEG).
     nonisolated static func normalizedImage(_ data: Data, type: UTType?) -> (Data, String)? {
         if let type, let ext = type.preferredFilenameExtension,
            [UTType.jpeg, .png, .gif, .webP].contains(where: { type.conforms(to: $0) }) {
@@ -194,7 +171,6 @@ final class AttachmentStore {
             .replacingOccurrences(of: ":", with: ".")
     }
 
-    /// Files (or raw images) dropped anywhere on the chat.
     func drop(_ providers: [NSItemProvider], chat: ChatStore) -> Bool {
         var handled = false
         for provider in providers {
@@ -221,7 +197,6 @@ final class AttachmentStore {
     }
 
     #if os(iOS)
-    /// Any other typed data (Files/Photos drags on iPad); images are normalized for upload.
     private func loadData(from provider: NSItemProvider, chat: ChatStore) -> Bool {
         guard let typeID = provider.registeredTypeIdentifiers.first(where: {
             UTType($0)?.conforms(to: .data) == true
@@ -246,8 +221,6 @@ final class AttachmentStore {
     }
     #endif
 
-    // MARK: Lifecycle
-
     func retry(_ id: UUID, chat: ChatStore) {
         tasks.removeValue(forKey: id)?.task.cancel()
         guard let i = index(id) else { return }
@@ -260,7 +233,6 @@ final class AttachmentStore {
         start(id, chat: chat)
     }
 
-    /// Removes the chip; a file already on the server is deleted from the thread (as on the web).
     func remove(_ id: UUID, chat: ChatStore) {
         tasks.removeValue(forKey: id)?.task.cancel()
         guard let i = index(id) else { return }
@@ -270,7 +242,6 @@ final class AttachmentStore {
         items.remove(at: i)
     }
 
-    /// The ready files as UIMessage `file` parts, removed from the tray. Failed ones stay.
     func takeReadyParts(api: API) -> [JSON] {
         guard let thread = threadID else { return [] }
         let ready = items.filter { $0.state == .ready && $0.docID != nil }
@@ -287,7 +258,6 @@ final class AttachmentStore {
         }
     }
 
-    /// Clears the tray when the chat switches thread (not while our own upload creates one).
     func threadDidChange(to id: String?) {
         guard threadTask == nil, id != threadID else { return }
         tasks.values.forEach { $0.task.cancel() }
@@ -297,13 +267,10 @@ final class AttachmentStore {
         threadID = nil
     }
 
-    // MARK: Upload
-
     private func index(_ id: UUID) -> Int? { items.firstIndex { $0.id == id } }
 
     private func isCurrent(_ id: UUID, _ token: UUID) -> Bool { tasks[id]?.token == token }
 
-    /// Changes an item only for the upload task that currently owns it.
     private func update(_ id: UUID, _ token: UUID, _ change: (inout Item) -> Void) {
         guard isCurrent(id, token), let i = index(id) else { return }
         change(&items[i])
@@ -312,11 +279,9 @@ final class AttachmentStore {
     private func start(_ id: UUID, chat: ChatStore) {
         tasks[id]?.task.cancel()
         let token = UUID()
-        // Main-actor task: it can't run before the handle is stored below.
         tasks[id] = (token, Task { await upload(id, token: token, chat: chat) })
     }
 
-    /// One thread for all files, also when several are added before it exists.
     private func thread(_ chat: ChatStore) async throws -> String {
         if let threadID { return threadID }
         if let threadTask { return try await threadTask.value }
@@ -339,8 +304,6 @@ final class AttachmentStore {
             var status: FileStatus
             var owned = true
             do {
-                // Progress arrives on a URLSession queue: keep only the newest value and apply
-                // them in order from one task instead of a main-actor Task per callback.
                 let (progress, sink) = AsyncStream.makeStream(of: Double.self, bufferingPolicy: .bufferingNewest(1))
                 let progressTask = Task {
                     for await fraction in progress {
@@ -354,7 +317,6 @@ final class AttachmentStore {
                     thread: thread, name: item.name, mimeType: item.mimeType, data: data
                 ) { _ = sink.yield($0) }
             } catch let error as UploadError where error.status == 409 {
-                // The thread already has this file (the server dedupes by content): attach that one.
                 guard let existing = try await chat.api.threadFiles(thread: thread)
                     .first(where: { $0.file_name == item.name && $0.file_size == item.size })
                 else { throw error }
@@ -366,7 +328,7 @@ final class AttachmentStore {
             try Task.checkCancellation()
             guard isCurrent(id, token), index(id) != nil else { throw CancellationError() }
             update(id, token) { $0.ownsFile = owned; $0.docID = status.id; $0.data = nil }
-            uploaded = nil // The item references the file now; remove/retry delete it.
+            uploaded = nil
             var polls = 0
             while status.inFlight {
                 guard polls < Self.maxPolls else { throw ProcessingTimeout() }
@@ -377,12 +339,10 @@ final class AttachmentStore {
             }
             update(id, token) {
                 $0.state = status.failed ? .failed(status.error.flatMap { $0.isEmpty ? nil : $0 } ?? "Processing failed") : .ready
-                // Re-upload on retry needs the bytes again.
                 if status.failed { $0.data = data }
             }
         } catch {
             if let uploaded, uploaded.owned {
-                // Removed or retried just as the upload finished: nothing references that file.
                 Task { try? await chat.api.deleteThreadFile(thread: uploaded.thread, file: uploaded.doc) }
             }
             if !Task.isCancelled {
@@ -394,8 +354,6 @@ final class AttachmentStore {
     private struct ProcessingTimeout: LocalizedError {
         var errorDescription: String? { "Processing timed out" }
     }
-
-    // MARK: Helpers
 
     private static let mimeByExtension = [
         "md": "text/markdown", "markdown": "text/markdown", "txt": "text/plain", "csv": "text/csv",
@@ -409,17 +367,11 @@ final class AttachmentStore {
     }
 }
 
-// MARK: - Views
-
-/// One attachment in the composer tray: thumbnail/icon, name, size or state, remove/retry.
-/// A failed chip's thumbnail becomes the Retry button (clear of the remove badge's hit area).
-/// VoiceOver: the chip is a container of "name, state", Retry and Remove.
 struct AttachmentChip: View {
     let item: AttachmentStore.Item
     let onRemove: () -> Void
     let onRetry: () -> Void
 
-    /// iOS: 44pt tap areas around the small controls; their look and the layout stay the same.
     private static let hitSize: CGFloat = Platform.isMac ? 0 : 44
 
     var body: some View {
@@ -482,7 +434,6 @@ struct AttachmentChip: View {
     }
 
     #if os(iOS)
-    /// SF Symbol for a file type (iOS has no per-type Finder icons).
     static func symbol(for mimeType: String) -> String {
         guard let type = UTType(mimeType: mimeType) else { return "doc" }
         if type.conforms(to: .pdf) { return "doc.richtext" }
@@ -545,8 +496,6 @@ struct AttachmentChip: View {
     }
 }
 
-/// The chip's "x" badge, sitting on its top-right corner. On iOS the tap area is `hitSize`
-/// square around the badge without moving it.
 private struct RemoveBadgeStyle: ButtonStyle {
     let hitSize: CGFloat
 
@@ -560,12 +509,10 @@ private struct RemoveBadgeStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.6 : 1)
             .frame(width: box, height: box)
             .contentShape(Rectangle())
-            // Same badge position (overhanging the corner by 6pt) whatever the tap box size.
             .offset(x: (box - glyph) / 2 + 6, y: -(box - glyph) / 2 - 6)
     }
 }
 
-/// Dashed drag-over affordance for a drop zone.
 struct AttachmentDropOverlay: View {
     let enabled: Bool
 

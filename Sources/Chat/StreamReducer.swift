@@ -1,18 +1,5 @@
 import Foundation
 
-/// Folds UI-message-stream events (SSE `data:` objects) into the streaming assistant message's
-/// parts, the way the AI SDK client's `processUIMessageStream` builds `UIMessage.parts`:
-///
-/// - `text-*` / `reasoning-*` → `{type:"text"|"reasoning", text, state:"streaming"|"done"}`
-/// - `tool-input-start/delta/available`, `tool-output-available/error` → one
-///   `{type:"tool-<name>", toolCallId, state, input, output, errorText, callProviderMetadata}` per call
-/// - `source-url`, `source-document`, `file`, non-transient `data-*` → appended as-is
-/// - `start-step` → `{type:"step-start"}`
-///
-/// Stream-only bookkeeping (open text/reasoning blocks by id, partial tool input JSON, thinking
-/// time) lives in `StreamScratch`, never in the parts: parts are sent back to the server as-is.
-/// `start` / `finish` / `abort` go to `message.meta` (`id`, `finish_reason`), mirroring a history row.
-/// An `error` event does not throw: the error shows inline as a `data-error` part.
 enum StreamReducer {
     static func apply(_ event: JSON, to message: inout ChatMessage) throws {
         guard let type = event["type"]?.string else { return }
@@ -104,7 +91,6 @@ enum StreamReducer {
 
         case "abort":
             closeStreaming(&message)
-            // Calls that never finished stop their spinners.
             for i in message.parts.indices where Part.isTool(message.parts[i]) && Part.isRunning(message.parts[i]) {
                 message.parts[i]["state"] = .string("output-error")
                 if message.parts[i]["errorText"] == nil { message.parts[i]["errorText"] = .string("Stopped") }
@@ -113,7 +99,6 @@ enum StreamReducer {
             scratch.end(key)
 
         case "error":
-            // The server sends `data-error` (kept in parts, as on reload) right before `error`.
             if !message.parts.contains(where: { $0["type"]?.string == "data-error" }) {
                 let text = event["errorText"]?.string ?? "Something went wrong."
                 message.parts.append(.object(["type": .string("data-error"),
@@ -137,15 +122,11 @@ enum StreamReducer {
         }
     }
 
-    // MARK: Helpers
-
     private static func setMeta(_ message: inout ChatMessage, _ key: String, _ value: JSON) {
         if message.meta?.object == nil { message.meta = .object([:]) }
         message.meta?[key] = value
     }
 
-    /// A delta without its `*-start` (older servers): continue the last part of that kind if it is
-    /// still streaming, else start one.
     private static func openFallback(_ kind: String, in message: inout ChatMessage, scratch: StreamScratch, block: String) -> Int {
         if let i = message.parts.indices.last, message.parts[i]["type"]?.string == kind,
            message.parts[i]["state"]?.string != "done" {
@@ -156,7 +137,6 @@ enum StreamReducer {
         return message.parts.count - 1
     }
 
-    /// Like the AI SDK's `updateToolPart`: update the call's part in place, or append a new one.
     private static func updateTool(_ message: inout ChatMessage, id: String, name: String?, state: String,
                                    fields: [String: JSON?], callMetadata: JSON?) {
         if let i = message.parts.firstIndex(where: { $0["toolCallId"]?.string == id && Part.isTool($0) }) {
@@ -181,7 +161,6 @@ enum StreamReducer {
         return .object(part)
     }
 
-    /// Marks open text/reasoning parts done (the stream ended without their `*-end`).
     private static func closeStreaming(_ message: inout ChatMessage) {
         for i in message.parts.indices where message.parts[i]["state"]?.string == "streaming" {
             message.parts[i]["state"] = .string("done")
@@ -190,8 +169,6 @@ enum StreamReducer {
     }
 }
 
-/// Per-stream state the AI SDK keeps outside the message: open blocks by id, partial tool input,
-/// and when each reasoning part started/stopped (for "Thought for Ns").
 final class StreamScratch: @unchecked Sendable {
     static let shared = StreamScratch()
     private let lock = NSLock()
@@ -221,9 +198,7 @@ final class StreamScratch: @unchecked Sendable {
         }
     }
 
-    /// Seconds a reasoning part took, when it streamed in this session.
     func thinkingDuration(_ message: String, part: Int) -> TimeInterval? { locked { thinkingTime["\(message)#\(part)"] } }
-    /// Total thinking time of a message's reasoning parts streamed in this session.
     func thinkingDuration(_ message: String) -> TimeInterval? {
         locked {
             let times = thinkingTime.filter { $0.key.hasPrefix("\(message)#") }.map(\.value)
@@ -232,8 +207,6 @@ final class StreamScratch: @unchecked Sendable {
     }
 }
 
-/// Best-effort parse of a JSON prefix (streaming tool input), like the AI SDK's `parsePartialJson`:
-/// closes open strings, arrays and objects and drops a dangling key or comma.
 enum PartialJSON {
     static func parse(_ text: String) -> JSON? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -256,12 +229,10 @@ enum PartialJSON {
         }
         var repaired = trimmed
         if inString { repaired += escaped ? "\\\"" : "\"" }
-        // Up to a few attempts: drop trailing junk that cannot be closed (`,`, `:`, `"key"`).
         for _ in 0..<3 {
             if let json = decode(repaired + String(stack.reversed())) { return json }
             while let last = repaired.last, ",: \n\t".contains(last) { repaired.removeLast() }
             if let json = decode(repaired + String(stack.reversed())) { return json }
-            // `{"a": 1, "b` → drop the dangling key.
             if repaired.last == "\"", let open = repaired.dropLast().lastIndex(of: "\"") {
                 repaired = String(repaired[..<open])
             } else { break }

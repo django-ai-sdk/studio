@@ -1,9 +1,5 @@
 import SwiftUI
 
-/// What the agent used in this thread (web: SourcesTab): a clicked citation first, at its
-/// supporting passages; then the cited sources, the other retrieved sources, tool results per
-/// turn, the memories it searched and sources found by search. Expanding a source shows its
-/// text with every passage the thread's answers cited highlighted.
 struct SourcesTab: View {
     let threadID: String?
 
@@ -33,16 +29,11 @@ struct SourcesTab: View {
 
     private struct LoadKey: Hashable { let thread: String?; let streaming: Bool }
 
-    // MARK: Derived from the open thread's messages
-
-    /// Citations, tool results and search hits across the thread's answers. Rebuilt when a reply
-    /// finishes streaming or the message count changes, not on every streamed token.
     @State private var derived = Derived()
 
     private struct DeriveKey: Equatable { let thread: String?; let count: Int; let streaming: Bool }
 
     private struct Derived {
-        /// Every passage the answers cited, per source key.
         var passages: [String: [String]] = [:]
         var toolResults: [ToolResult] = []
         var ragSources: [SearchHit] = []
@@ -50,7 +41,6 @@ struct SourcesTab: View {
         init() {}
 
         init(messages: [ChatMessage]) {
-            // Assistant answers with their turn number.
             let turns = messages.filter { $0.role == "assistant" }.enumerated().map { ($0.offset + 1, $0.element) }
             for (_, message) in turns {
                 guard let data = Citations(parts: message.parts) else { continue }
@@ -70,7 +60,6 @@ struct SourcesTab: View {
                                       error: Part.toolError(p), state: state)
                 }
             }
-            // `data-rag-retrieval` parts: what a knowledge search returned.
             ragSources = turns.flatMap { _, message in
                 message.parts.filter { Part.type($0) == "data-rag-retrieval" }
                     .flatMap { $0["data"]?["sources"]?.array ?? [] }
@@ -87,8 +76,6 @@ struct SourcesTab: View {
         let evidence: [(source: ThreadSource, passage: String)]
     }
 
-    /// The citation the panel was opened at, resolved against the loaded sources (falling back
-    /// to the answer's own copy of a source).
     private var focus: Focus? {
         guard let ref = panel.citation,
               let message = chat.messages.first(where: { $0.id == ref.message }),
@@ -112,8 +99,6 @@ struct SourcesTab: View {
     }
 
     private struct SearchHit: Identifiable { let id: String; let title: String; let url: URL? }
-
-    // MARK: Views
 
     @ViewBuilder private var content: some View {
         let focus = focus
@@ -264,8 +249,6 @@ struct SourcesTab: View {
     }
 }
 
-/// One source: icon, title, kind and an excerpt; expanded, its text with the cited passages
-/// highlighted. A focused source opens at its passage, with the full text one click away.
 private struct SourceRow: View {
     let source: ThreadSource
     let passages: [String]
@@ -298,8 +281,6 @@ private struct SourceRow: View {
             .padding(.top, 4)
         } label: {
             #if os(macOS)
-            // The Mac disclosure only toggles from its chevron; make the whole label a real button
-            // so a click, the keyboard and VoiceOver can all expand it.
             Button {
                 withAnimation(reduceMotion ? nil : .snappy) { expanded.toggle() }
             } label: {
@@ -308,7 +289,6 @@ private struct SourceRow: View {
             .buttonStyle(.plain)
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")
             #else
-            // iOS: the disclosure row itself toggles and carries the expanded trait.
             labelContent
             #endif
         }
@@ -343,8 +323,6 @@ private struct SourceRow: View {
     }
 }
 
-/// Source text with the passages marked like a highlighter (web: SourcePassage's plain fallback).
-/// With `window`, only that many characters around the first passage show.
 private struct PassageText: View {
     let content: String
     let passages: [String]

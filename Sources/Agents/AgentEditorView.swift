@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Create or edit a runtime agent (sheet). Mirrors the web app's agent form.
 struct AgentEditorView: View {
-    /// nil creates a new agent.
     let agent: RuntimeAgent?
     var onSaved: (RuntimeAgent) -> Void
 
@@ -26,7 +24,6 @@ struct AgentEditorView: View {
     @State private var maxHistory = ""
     @State private var saving = false
     @State private var error: String?
-    /// The form as filled in on open; anything else counts as unsaved changes.
     @State private var initial: Snapshot?
     @State private var confirmDiscard = false
 
@@ -229,7 +226,6 @@ struct AgentEditorView: View {
             "vision": vision,
             "max_history": historyValue.map { $0 as Any } ?? NSNull(),
         ]
-        // An empty model keeps the current one (edit) or the server default (create).
         let m = modelName.trimmingCharacters(in: .whitespaces)
         if !m.isEmpty { body["model"] = m }
         do {

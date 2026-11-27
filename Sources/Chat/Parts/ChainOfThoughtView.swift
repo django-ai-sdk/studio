@@ -1,11 +1,7 @@
 import SwiftUI
 
-/// One collapsible timeline above the answer with everything the agent did first: reasoning and
-/// every tool call, in stream order (web: ChainOfThought.tsx). While streaming, the header names
-/// the step in flight with a shimmer; when done it reads "Thought for 4s · Used 2 tools".
 struct ChainOfThoughtView: View {
     let messageID: String
-    /// Reasoning parts (with their index in `message.parts`, for timing) and tool parts.
     let steps: [(index: Int, part: JSON)]
     let streaming: Bool
     @State private var expanded: Bool
@@ -41,7 +37,6 @@ struct ChainOfThoughtView: View {
         return segments.isEmpty ? "Steps" : segments.joined(separator: " · ")
     }
 
-    /// The end of the reasoning being streamed, flattened to one line.
     private var liveTail: String? {
         guard let active = steps.last(where: { Part.isRunning($0.part) }), Part.type(active.part) == "reasoning",
               let text = active.part["text"]?.string, !text.isEmpty else { return nil }
@@ -84,7 +79,6 @@ struct ChainOfThoughtView: View {
             .accessibilityHint("Shows the reasoning and tool calls")
 
             if running, !expanded, let tail = liveTail {
-                // The thought in flight, as a faint two-line ticker under the header.
                 Text(tail)
                     .font(.callout)
                     .foregroundStyle(.tertiary)
@@ -96,7 +90,6 @@ struct ChainOfThoughtView: View {
 
             if expanded {
                 VStack(alignment: .leading, spacing: 6) {
-                    // Keyed by tool call / part index, so a row's expansion stays put while steps stream in.
                     ForEach(steps.map { KeyedStep(step: $0) }, id: \.id) { keyed in
                         let step = keyed.step
                         if Part.isTool(step.part) {
@@ -117,13 +110,11 @@ struct ChainOfThoughtView: View {
     }
 }
 
-/// A step keyed by its tool call id (else its part index), stable as parts stream in.
 private struct KeyedStep {
     let step: (index: Int, part: JSON)
     var id: String { step.part["toolCallId"]?.string ?? "part-\(step.index)" }
 }
 
-/// One reasoning block inside the chain: a one-line preview that expands to the full text.
 private struct ReasoningStep: View {
     let part: JSON
     let duration: TimeInterval?
@@ -180,10 +171,7 @@ private struct ReasoningStep: View {
     }
 }
 
-// MARK: Shimmer
-
 extension View {
-    /// A light sweep across the view while `active` (static with Reduce Motion).
     func shimmer(active: Bool) -> some View { modifier(Shimmer(active: active)) }
 }
 

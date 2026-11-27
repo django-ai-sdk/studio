@@ -1,10 +1,8 @@
 import SwiftUI
 
-/// A small tinted capsule: an outcome, a lens value, a rule's state.
 struct OversightBadge: View {
     let tone: OversightTone
     var showsIcon = true
-    /// Long values (lists of findings) are cut to this many characters; the full text is in the help tag.
     var maxLength = 40
 
     private var text: String { tone.label.count > maxLength ? tone.label.prefix(maxLength - 1) + "…" : tone.label }
@@ -23,7 +21,6 @@ struct OversightBadge: View {
     }
 }
 
-/// The rounded surface every card in the tab sits on.
 struct OversightCardBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -36,7 +33,6 @@ extension View {
     func oversightCard() -> some View { modifier(OversightCardBackground()) }
 }
 
-/// One turn: a header line that opens its record below (web: TurnCard).
 struct OversightTurnCard: View {
     let row: OversightTurn
     let number: Int?
@@ -94,7 +90,6 @@ struct OversightTurnCard: View {
         ].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    /// What oversight did, from the row alone (web: rowSummary).
     private func summary(_ turn: OversightTurn) -> String {
         let reviews = turn.reviews_open ?? 0
         if reviews > 0 { return reviews == 1 ? "sent to review" : "\(reviews) sent to review" }
@@ -137,7 +132,6 @@ struct OversightTurnCard: View {
     }
 }
 
-/// A turn's record: outcome, notices, the pipeline stage by stage, then facts and content.
 struct OversightTurnBody: View {
     let turn: OversightTurn
 
@@ -150,7 +144,6 @@ struct OversightTurnBody: View {
         }
     }
 
-    /// The header badge already says how the turn ended; this row adds what report rules and severity say.
     private var hasOutcomeExtras: Bool {
         (turn.report_outcome.map { !$0.isEmpty && $0 != turn.outcome } ?? false) || !(turn.severity ?? "").isEmpty
     }
@@ -170,9 +163,6 @@ struct OversightTurnBody: View {
     }
 }
 
-// MARK: Notices
-
-/// Callouts for what the user and the team were told: replies, alerts, reviews, errors.
 struct OversightNotices: View {
     let turn: OversightTurn
 
@@ -227,8 +217,6 @@ struct OversightNotices: View {
         return lines
     }
 }
-
-// MARK: Facts & content
 
 struct OversightTurnFacts: View {
     let turn: OversightTurn

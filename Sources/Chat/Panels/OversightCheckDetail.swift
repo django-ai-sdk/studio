@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Drill-in for one check: a rule match explained in sentences, or a lens answer
-/// with its confidence, reasoning and fallback trail (web: OversightPolicyDetail,
-/// OversightTurnDrawer rows).
 struct OversightCheckDetail: View {
     let item: OversightCheck
 
@@ -22,8 +19,6 @@ struct OversightCheckDetail: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 }
-
-// MARK: Pieces
 
 private struct DetailHeader: View {
     let kind: String
@@ -98,8 +93,6 @@ private struct ConditionView: View {
     }
 }
 
-// MARK: Rule
-
 private struct RuleDetail: View {
     let match: OversightMatch
     let reviews: [OversightReview]
@@ -173,8 +166,6 @@ private struct RuleDetail: View {
         }
     }
 }
-
-// MARK: Lens
 
 private struct LensDetail: View {
     let answer: OversightAnswer

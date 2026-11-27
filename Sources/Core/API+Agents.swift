@@ -1,9 +1,5 @@
 import Foundation
 
-// Agents: read-only info for every agent (/api/agents/{id}/…) plus the builder for
-// user-defined "runtime" agents (/api/agents/runtimes/…). A runtime agent's id is the
-// same in both, so `runtimeAgents()` tells which agents in the gallery are editable.
-
 struct ObjectPermissions: Decodable, Hashable {
     var can_read = false
     var can_write = false
@@ -11,7 +7,6 @@ struct ObjectPermissions: Decodable, Hashable {
     var can_delete = false
 }
 
-/// GET /api/agents/{id}/
 struct AgentInfo: Decodable, Hashable {
     let id: String
     let name: String?
@@ -25,7 +20,6 @@ struct AgentInfo: Decodable, Hashable {
     let permissions: ObjectPermissions?
 }
 
-/// One tool from GET /api/agents/{id}/tools/ (toolsets nest their tools in `children`).
 struct AgentTool: Decodable, Hashable, Identifiable {
     let label: String
     let description: String?
@@ -47,7 +41,6 @@ struct AgentTools: Decodable, Hashable {
     let integrations: [AgentIntegrationStatus]?
 }
 
-/// A runtime (user-defined) agent's settings: AgentSettingsOut.
 struct RuntimeAgent: Decodable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -66,7 +59,6 @@ struct RuntimeAgent: Decodable, Hashable, Identifiable {
     let active: Bool
     let permissions: ObjectPermissions?
 
-    /// The API returns `can_delete: false` to managers but lets them delete, like the web app.
     var canEdit: Bool { permissions.map { $0.can_write || $0.can_manage } ?? false }
     var canDelete: Bool { permissions.map { $0.can_delete || $0.can_manage } ?? false }
     var canManageAccess: Bool { permissions?.can_manage ?? false }
@@ -85,7 +77,6 @@ struct RuntimeAgentToolOption: Decodable, Hashable, Identifiable {
     var id: String { key }
 }
 
-/// GET /api/integrations/ (MCP servers / API integrations an agent can use).
 struct IntegrationOption: Decodable, Hashable, Identifiable {
     let name: String
     let label: String
@@ -95,7 +86,6 @@ struct IntegrationOption: Decodable, Hashable, Identifiable {
     var id: String { name }
 }
 
-/// GET /api/memories/ (knowledge bases); not every backend mounts it.
 struct MemoryOption: Decodable, Hashable, Identifiable {
     let id: String
     let name: String
@@ -123,7 +113,6 @@ struct AgentGroupAccess: Decodable, Hashable, Identifiable {
     var id: Int { group_id }
 }
 
-/// User search result (GET /api/users/?q=). `id` is a number or string depending on the user model.
 struct UserOption: Decodable, Hashable, Identifiable {
     let id: String
     let first_name: String
@@ -157,8 +146,6 @@ extension API {
         q.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
     }
 
-    // MARK: Any agent
-
     func agentInfo(_ id: String) async throws -> AgentInfo {
         try await json(AgentInfo.self, "GET", "/api/agents/\(id)/")
     }
@@ -166,8 +153,6 @@ extension API {
     func agentTools(_ id: String) async throws -> AgentTools {
         try await json(AgentTools.self, "GET", "/api/agents/\(id)/tools/")
     }
-
-    // MARK: Runtime agents (builder)
 
     func runtimeAgents() async throws -> [RuntimeAgent] {
         try await json([RuntimeAgent].self, "GET", "/api/agents/runtimes/")
@@ -193,12 +178,10 @@ extension API {
         try await json([MemoryOption].self, "GET", "/api/memories/")
     }
 
-    /// `body` follows AgentSettingsCreateIn (`name` required).
     func createRuntimeAgent(_ body: [String: Any]) async throws -> RuntimeAgent {
         try await json(RuntimeAgent.self, "POST", "/api/agents/runtimes/", body: body)
     }
 
-    /// `body` follows AgentSettingsUpdateIn (every field optional).
     func updateRuntimeAgent(_ id: String, _ body: [String: Any]) async throws -> RuntimeAgent {
         try await json(RuntimeAgent.self, "PATCH", "/api/agents/runtimes/\(id)/", body: body)
     }
@@ -206,8 +189,6 @@ extension API {
     func deleteRuntimeAgent(_ id: String) async throws {
         try await ok("DELETE", "/api/agents/runtimes/\(id)/")
     }
-
-    // MARK: Access
 
     func agentUsers(_ id: String) async throws -> [AgentUserAccess] {
         try await json([AgentUserAccess].self, "GET", "/api/agents/runtimes/\(id)/users/")
@@ -229,7 +210,6 @@ extension API {
         try await ok("DELETE", "/api/agents/runtimes/\(id)/users/\(user)/")
     }
 
-    /// Upserts: adding an existing group changes its role.
     func addAgentGroup(_ id: String, group: Int, canManage: Bool) async throws {
         try await ok("POST", "/api/agents/runtimes/\(id)/groups/", body: ["group_id": group, "can_manage": canManage])
     }

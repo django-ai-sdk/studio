@@ -1,15 +1,8 @@
 import SwiftUI
 
-/// One chat message, laid out like the web app's MessageItem, in Apple style:
-/// - user: right-aligned bubble, attachments above it;
-/// - assistant: no bubble, full column width, in the order the assistant worked — chain of thought
-///   (reasoning + tool calls), artifacts, the answer (markdown, citation markers), then files,
-///   errors, oversight notices, sources, hover actions and follow-up suggestions.
 struct MessageView: View {
     let message: ChatMessage
     var streaming = false
-    /// The conversation's last message (shows follow-up suggestions). Passed in by the list so a
-    /// row never reads `chat.messages`, which would re-render every row per streamed token.
     var isLast = false
 
     var body: some View {
@@ -20,8 +13,6 @@ struct MessageView: View {
         }
     }
 }
-
-// MARK: User
 
 private struct UserMessage: View {
     let message: ChatMessage
@@ -51,28 +42,21 @@ private struct UserMessage: View {
     }
 }
 
-// MARK: Assistant
-
 private struct AssistantMessage: View {
     let message: ChatMessage
     let streaming: Bool
     let showSuggestions: Bool
-    /// Only for actions (suggestion chips send); the body never reads its state.
     @Environment(ChatStore.self) private var chat: ChatStore?
-    /// Thread side panel; citations open its Sources tab like the web app. Nil outside ChatView (sheet fallback).
     @Environment(ThreadPanelState.self) private var panel: ThreadPanelState?
-    /// The enclosing link handler (the thread panel's browser), read before the answer's own override.
     @Environment(\.openURL) private var inheritedOpenURL
     @State private var hovering = false
     @State private var copied = false
     @State private var citationFocus: CitationFocus?
 
-    /// Everything the view reads from the parts, worked out once per render.
     private struct Derived {
         var parts: [JSON] = []
         var citations: Citations?
         var steps: [(index: Int, part: JSON)] = []
-        /// Keyed by tool call id (else part index), so rows keep their state while parts stream in.
         var artifacts: [(id: String, part: JSON)] = []
         var answer = ""
         var plainAnswer = ""
@@ -88,8 +72,6 @@ private struct AssistantMessage: View {
             parts = Part.dedupTools(message.parts)
             citations = Citations(parts: parts)
 
-            // Reasoning worth showing and every tool call but the citations one, with the part's
-            // index in `message.parts` (for thinking time); duplicate tool parts keep the best state.
             let bestTools = Dictionary(parts.filter(Part.isTool).compactMap { p in p["toolCallId"]?.string.map { ($0, p) } },
                                        uniquingKeysWith: { a, _ in a })
             var seen = Set<String>()
@@ -121,7 +103,6 @@ private struct AssistantMessage: View {
                                   url: url, isDocument: t == "source-document")
             }
 
-            // The answer: oversight's replacement if any, else the text parts, with citation markers.
             let texts = parts.filter { Part.type($0) == "text" }.compactMap { $0["text"]?.string }
             if let replaced = Oversight.replacementText(parts) {
                 answer = replaced
@@ -209,8 +190,6 @@ private struct AssistantMessage: View {
         .animation(.snappy(duration: 0.2), value: d.isEmpty)
     }
 
-    /// Copy (and the cited-sources button) below the answer; on macOS the copy button shows on
-    /// hover, on iOS (no hover) it is always visible.
     private func actions(_ d: Derived) -> some View {
         HStack(spacing: 2) {
             Button {
@@ -260,21 +239,18 @@ private struct AssistantMessage: View {
             }
             return .handled
         default:
-            // Web links go to the enclosing handler (the panel's browser); `.systemAction` would bypass it.
             guard ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return .systemAction }
             inheritedOpenURL(url)
             return .handled
         }
     }
 
-    /// Markdown as plain text: inline markup (emphasis, links, code) dropped, line breaks kept.
     nonisolated static func plainText(_ markdown: String) -> String {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         guard let attributed = try? AttributedString(markdown: markdown, options: options) else { return markdown }
         return String(attributed.characters)
     }
 
-    /// `[3]` markers (answers stored with inline citations) → superscript links to the source.
     nonisolated static func linkLegacyCitations(_ text: String, count: Int) -> String {
         guard let regex = try? NSRegularExpression(pattern: #"\[(\d{1,3})\](?![(\[:])"#) else { return text }
         var out = text

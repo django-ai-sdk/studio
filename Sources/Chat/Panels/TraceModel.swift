@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 
-/// What a span did, from its Haystack operation name and tags.
 enum TraceSpanKind: Hashable, Sendable {
     case agent, step, llm, tool, retrieval, component, pipeline, subagent, hook, other
 
@@ -36,19 +35,16 @@ enum TraceSpanKind: Hashable, Sendable {
     }
 }
 
-/// One span, placed in its turn's tree and timeline.
 struct TraceNode: Identifiable, Hashable, Sendable {
     let span: TraceSpanOut
     let kind: TraceSpanKind
     let title: String
-    /// Model, tool description, hook point… shown next to the title.
     let detail: String?
     let start: Date
     let end: Date?
     let error: String?
     var depth = 0
     var children: [TraceNode] = []
-    /// Position on the turn's timeline, 0…1.
     var offset: Double = 0
     var width: Double = 0
 
@@ -58,7 +54,6 @@ struct TraceNode: Identifiable, Hashable, Sendable {
     var model: String? { span.model_name.flatMap { $0.isEmpty ? nil : $0 } }
 }
 
-/// One agent answer (user message → reply) with the spans that produced it.
 struct TraceTurn: Identifiable, Hashable, Sendable {
     let id: String
     var number: Int?
@@ -78,7 +73,6 @@ struct TraceTurn: Identifiable, Hashable, Sendable {
     var title: String { number.map { "Turn \($0)" } ?? "Run" }
 }
 
-/// Loads a thread's spans and turns them into per-turn trees. Held by `TraceTab` as `@State`.
 @Observable @MainActor
 final class TraceModel {
     private(set) var spans: [TraceSpanOut] = []
@@ -132,7 +126,6 @@ final class TraceModel {
         loaded = true
     }
 
-    /// For previews and offscreen rendering: use already-decoded data.
     func set(spans: [TraceSpanOut], usage: TraceTokenUsage?, history: [ChatMessage], costs: [TraceTurnCost] = []) {
         self.spans = spans; self.usage = usage; self.history = history; self.costs = costs
         loaded = true
@@ -144,14 +137,12 @@ final class TraceModel {
     }
 }
 
-/// Pure functions from flat spans to turn trees.
 enum TraceBuilder {
     static func turns(spans: [TraceSpanOut], history: [ChatMessage], costs: [TraceTurnCost], showHooks: Bool) -> [TraceTurn] {
         guard !spans.isEmpty else { return [] }
         let byID = Dictionary(spans.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let parentIDs = Set(spans.compactMap(\.parent_id))
 
-        // Root of each span, to group spans without a message id by run.
         func root(of span: TraceSpanOut) -> String {
             var current = span
             var seen: Set<String> = [span.id]
@@ -166,7 +157,6 @@ enum TraceBuilder {
             groups[key, default: []].append(span)
         }
 
-        // Turn numbers and prompts from the thread history.
         var info: [String: (number: Int, prompt: String?)] = [:]
         var lastUser: ChatMessage?
         var number = 0
@@ -196,7 +186,6 @@ enum TraceBuilder {
             let total = max(end.timeIntervalSince(start), 0.001)
             for i in placed.indices { place(&placed[i], start: start, total: total, depth: 0) }
 
-            // LLM calls are the leaves that carry usage (as the backend's token totals count them).
             let leaves = group.filter { !parentIDs.contains($0.id) && $0.total_tokens != nil }
             let tokens = leaves.isEmpty ? nil : leaves.reduce(0) { $0 + ($1.total_tokens ?? 0) }
             let promptTokens = leaves.compactMap(\.prompt_tokens)
@@ -217,11 +206,9 @@ enum TraceBuilder {
                 cost: costByMessage[key]
             ))
         }
-        // Newest first, like the web app's trace tab.
         return turns.sorted { $0.start > $1.start }
     }
 
-    /// Tree of `spans`; a span whose parent is hidden hangs under its nearest visible ancestor.
     private static func tree(_ spans: [TraceSpanOut], all: [String: TraceSpanOut]) -> [TraceNode] {
         let visibleIDs = Set(spans.map(\.id))
         func visibleParent(_ span: TraceSpanOut) -> String? {
@@ -273,7 +260,6 @@ enum TraceBuilder {
             title = span.agent_name.flatMap { $0.isEmpty ? nil : $0 } ?? "Agent run"
             if let steps = tags["haystack.agent.steps_taken"]?.number { detail = "\(Int(steps)) step\(steps == 1 ? "" : "s")" }
         case .step:
-            // Haystack counts steps from 0.
             title = tags["haystack.agent.step"]?.number.map { "Step \(Int($0) + 1)" } ?? "Step"
         case .llm:
             title = tag("haystack.component.name").map(humanize) ?? "LLM call"
@@ -320,7 +306,6 @@ enum TraceBuilder {
         return .other
     }
 
-    /// The span's error, from any truthy `*error*` tag (`haystack.tool.error: true`, an error message…).
     static func errorText(_ span: TraceSpanOut) -> String? {
         for (key, value) in (span.tags ?? [:]).sorted(by: { $0.key < $1.key }) where key.lowercased().contains("error") {
             switch value {
@@ -334,7 +319,6 @@ enum TraceBuilder {
         return nil
     }
 
-    /// Splits tags into what went in, what came out, and the rest. Stringified JSON is parsed.
     static func sections(_ span: TraceSpanOut) -> (input: JSON?, output: JSON?, attributes: JSON?) {
         var input: [String: JSON] = [:], output: [String: JSON] = [:], rest: [String: JSON] = [:]
         for (key, raw) in span.tags ?? [:] {
@@ -371,8 +355,6 @@ enum TraceBuilder {
         return files.isEmpty ? nil : files.joined(separator: ", ")
     }
 
-    /// Oversight records start before their answer is stored: each goes to the first unpaired
-    /// answer stored at or after it (the web app's pairing).
     private static func pairCosts(_ costs: [TraceTurnCost], answers: [ChatMessage]) -> [String: Double] {
         let rows = costs.compactMap { c in TraceDate.parse(c.created_at).map { (c, $0) } }.sorted { $0.1 < $1.1 }
         let dated = answers.compactMap { m in m.meta?["created_at"]?.string.flatMap(TraceDate.parse).map { (m.id, $0) } }
@@ -388,7 +370,6 @@ enum TraceBuilder {
     }
 }
 
-/// The backend sends both `…T20:21:50.543Z` and `…T20:22:14.217183+00:00`.
 enum TraceDate {
     nonisolated(unsafe) private static let fractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -399,7 +380,6 @@ enum TraceDate {
 
     static func parse(_ string: String) -> Date? {
         if let d = fractional.date(from: string) ?? plain.date(from: string) { return d }
-        // Trim microseconds to milliseconds: "…:14.217183+00:00" → "…:14.217+00:00".
         guard let dot = string.firstIndex(of: ".") else { return nil }
         let digits = string[string.index(after: dot)...].prefix { $0.isNumber }
         let trimmed = string[..<dot] + "." + digits.prefix(3) + string[digits.endIndex...]

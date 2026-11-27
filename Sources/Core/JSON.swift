@@ -1,7 +1,5 @@
 import Foundation
 
-/// Untyped JSON value. Chat message parts and stream events stay in the AI SDK's
-/// own JSON shape (UIMessage parts), so the views read them without a parallel model.
 enum JSON: Codable, Hashable, Sendable {
     case null
     case bool(Bool)
@@ -32,12 +30,10 @@ enum JSON: Codable, Hashable, Sendable {
         }
     }
 
-    /// From a Foundation value (`JSONSerialization` output, Swift literals); unknown types become null.
     init(any value: Any) {
         switch value {
         case let v as JSON: self = v
         case is NSNull: self = .null
-        // NSNumber bridges Bool and numbers alike; check the CF type so 1 stays a number.
         case let v as NSNumber where CFGetTypeID(v) == CFBooleanGetTypeID(): self = .bool(v.boolValue)
         case let v as NSNumber: self = .number(v.doubleValue)
         case let v as String: self = .string(v)
@@ -62,7 +58,6 @@ enum JSON: Codable, Hashable, Sendable {
     var array: [JSON]? { if case .array(let v) = self { v } else { nil } }
     var object: [String: JSON]? { if case .object(let v) = self { v } else { nil } }
 
-    /// Foundation value (`[String: Any]`, `[Any]`, …) for `JSONSerialization` bodies.
     var any: Any {
         switch self {
         case .null: NSNull()
@@ -74,7 +69,6 @@ enum JSON: Codable, Hashable, Sendable {
         }
     }
 
-    /// Pretty-printed JSON text, for showing tool input/output.
     var pretty: String {
         guard let data = try? JSONEncoder.pretty.encode(self) else { return "" }
         return String(decoding: data, as: UTF8.self)

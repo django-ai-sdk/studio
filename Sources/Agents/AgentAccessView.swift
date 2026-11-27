@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Who can use or manage a runtime agent. Changes apply immediately.
-/// Shown only to people who can manage the agent.
 struct AgentAccessSection: View {
     let agentID: String
 
@@ -96,7 +94,6 @@ struct AgentAccessSection: View {
             async let u = app.api.agentUsers(id)
             async let g = app.api.agentGroups(id)
             let (newUsers, newGroups) = try await (u, g)
-            // A newer load (another agent selected) owns the view now.
             guard !Task.isCancelled, id == agentID else { return }
             (users, groups) = (newUsers, newGroups)
         } catch {
@@ -107,7 +104,6 @@ struct AgentAccessSection: View {
     }
 }
 
-/// Search people or groups and add them to an agent.
 private struct AddAccessSheet: View {
     let agentID: String
     let existingUsers: Set<String>

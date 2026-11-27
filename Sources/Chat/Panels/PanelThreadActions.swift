@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The thread's own actions (web: useThreadActions), shared by the top bar's menu and the
-/// Agent tab: rename, reindex the agent's memories, delete. Each host keeps one in `@State`
-/// and attaches `.threadActionDialogs(_:threadID:)` for the rename / delete / result alerts.
 @Observable @MainActor
 final class ThreadActions {
     var renaming = false
@@ -27,7 +24,6 @@ final class ThreadActions {
         }
     }
 
-    /// Reindexes the memory linked to the thread, or all of the agent's memories.
     func reindex(_ app: AppStore, agent: String?, threadID: String, force: Bool) async {
         guard let agent, !reindexing else { return }
         reindexing = true
@@ -77,7 +73,6 @@ private struct ThreadActionDialogs: ViewModifier {
     }
 }
 
-/// "…" menu in the chat's top bar.
 struct ThreadActionsMenu: View {
     let threadID: String
 
@@ -108,7 +103,6 @@ struct ThreadActionsMenu: View {
     }
 }
 
-/// The Agent tab's action buttons.
 struct ThreadActionButtons: View {
     let threadID: String
 

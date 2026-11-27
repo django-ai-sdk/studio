@@ -3,11 +3,7 @@ import AppKit
 #endif
 import SwiftUI
 
-/// The SDK's green pixel-art pony (from sdk/docs/public/logo.png), drawn as crisp vector
-/// pixels so it scales to any size. Use `.frame(width:)` / `.frame(height:)` to size it;
-/// the aspect ratio (48:51) is kept.
 struct StudioLogo: View {
-    /// Brand green (the pony's body colour), for accents elsewhere in the UI.
     static let brandGreen = Color(red: 0x0F / 255, green: 0x8D / 255, blue: 0x5C / 255)
 
     var body: some View {
@@ -17,7 +13,6 @@ struct StudioLogo: View {
                 x: (size.width - cell * CGFloat(Self.columns)) / 2,
                 y: (size.height - cell * CGFloat(Self.rows.count)) / 2
             )
-            // Outline-coloured silhouette first so anti-aliased seams between cells never show.
             for (index, color) in Self.palette.enumerated() {
                 let key = Character(String(index + 1))
                 var path = Path()
@@ -36,10 +31,6 @@ struct StudioLogo: View {
         .accessibilityLabel("Studio")
     }
 
-    // MARK: - Pixel data
-
-    /// 1 = outline, 2 = dark, 3 = shade, 4 = body (brand green), 5 = light, 6 = highlight.
-    // Explicit types: Xcode 26's type checker times out on the inferred version of this.
     private static let palette: [Color] = ([0x052F1C, 0x085743, 0x1D8352, 0x0F8D5C, 0x199C64, 0x24B66E] as [Int]).map { (hex: Int) -> Color in
         let red = Double((hex >> 16) & 0xFF) / 255
         let green = Double((hex >> 8) & 0xFF) / 255
@@ -104,8 +95,6 @@ struct StudioLogo: View {
     ].map(Array.init)
 }
 
-/// The macOS app icon (same design as Resources/AppIcon.icns): the pony on a light mint
-/// squircle. Used to set the Dock icon when running unbundled via `swift run`.
 struct StudioAppIcon: View {
     var body: some View {
         GeometryReader { geo in
@@ -129,8 +118,6 @@ struct StudioAppIcon: View {
     }
 
     #if os(macOS)
-    /// Renders the icon to an `NSImage` for `NSApp.applicationIconImage`.
-    /// (The iOS app icon comes from the asset catalog.)
     @MainActor static func image(size: CGFloat = 512) -> NSImage? {
         let renderer = ImageRenderer(content: StudioAppIcon().frame(width: size, height: size))
         renderer.scale = 2

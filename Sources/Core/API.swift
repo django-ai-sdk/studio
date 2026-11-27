@@ -1,13 +1,5 @@
 import Foundation
 
-// ponytail: the SDK's API only accepts Django session auth (no tokens yet), so we log in
-// through allauth's *browser* client and let URLSession keep the sessionid + csrftoken
-// cookies, sending X-CSRFToken like the web app does. Once the SDK accepts tokens, switch
-// to allauth's app client (/_allauth/app/v1, X-Session-Token header) and drop the cookies.
-//
-// Feature areas add endpoints in their own `extension API` files (API+Workflows.swift, …)
-// on top of `json`, `send`, `request` and `stream` below.
-
 struct APIError: LocalizedError {
     let message: String
     var errorDescription: String? { message }
@@ -28,20 +20,16 @@ struct ThreadItem: Decodable, Identifiable, Hashable {
     let agent_id: String
     let updated_at: String
 
-    /// The title for lists and menus; "Untitled" when the server has none yet.
     var displayTitle: String {
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? "Untitled" : t
     }
 }
 
-/// One chat message in the AI SDK UIMessage shape: `parts` are raw part objects
-/// (`{"type":"text","text":…}`, `{"type":"reasoning",…}`, `{"type":"tool-<name>",…}`, …).
 struct ChatMessage: Identifiable, Equatable {
     let id: String
     let role: String
     var parts: [JSON]
-    /// Full history-row JSON from the server (finish_reason, usage, feedback…); nil for local messages.
     var meta: JSON? = nil
 
     var text: String { parts.filter { $0["type"]?.string == "text" }.compactMap { $0["text"]?.string }.joined() }
@@ -49,7 +37,6 @@ struct ChatMessage: Identifiable, Equatable {
     var wire: [String: Any] { ["id": id, "role": role, "parts": parts.map(\.any)] }
 }
 
-/// Immutable (base URL + session), so it is safe to share across tasks; a server change makes a new one.
 final class API: Sendable {
     let base: URL
     let session: URLSession
@@ -66,8 +53,6 @@ final class API: Sendable {
 
     func url(_ path: String) -> URL? { URL(string: path, relativeTo: base) }
 
-    /// Authenticated request. `body` is JSON-encoded unless it is already `Data`
-    /// (then set Content-Type yourself, e.g. for multipart uploads).
     func request(_ method: String, _ path: String, body: Any? = nil) throws -> URLRequest {
         guard let url = url(path) else { throw APIError(message: "Bad URL: \(path)") }
         var req = URLRequest(url: url)
@@ -76,7 +61,6 @@ final class API: Sendable {
         if let csrf = cookies.first(where: { $0.name == "csrftoken" })?.value {
             req.setValue(csrf, forHTTPHeaderField: "X-CSRFToken")
         }
-        // Django's CSRF check wants a same-origin Referer over HTTPS.
         req.setValue(base.absoluteString, forHTTPHeaderField: "Referer")
         if let data = body as? Data {
             req.httpBody = data
@@ -98,7 +82,6 @@ final class API: Sendable {
         try await send(request(method, path, body: body))
     }
 
-    /// Decodes a 2xx response, throws the server's error message otherwise.
     func json<T: Decodable>(_ type: T.Type, _ method: String, _ path: String, body: Any? = nil) async throws -> T {
         try await json(type, request(method, path, body: body))
     }
@@ -117,7 +100,6 @@ final class API: Sendable {
         return APIError(message: first ?? obj?["detail"] as? String ?? obj?["message"] as? String ?? "HTTP \(status)")
     }
 
-    /// POSTs and yields each SSE `data:` event as JSON until `[DONE]`.
     func stream(_ path: String, body: Any, onEvent: @MainActor @Sendable (JSON) throws -> Void) async throws {
         let (bytes, response) = try await session.bytes(for: request("POST", path, body: body))
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -135,16 +117,12 @@ final class API: Sendable {
         }
     }
 
-    // MARK: Auth (allauth headless, browser client)
-
     private let auth = "/_allauth/browser/v1"
 
-    /// Also sets the csrftoken cookie, so call it before logging in.
     func isLoggedIn() async throws -> Bool {
         try await session() != nil
     }
 
-    /// The signed-in account (email, else display name; "" if neither), or nil when signed out.
     func session() async throws -> String? {
         let (data, status) = try await send("GET", "\(auth)/auth/session")
         guard status == 200 else { return nil }
@@ -155,7 +133,7 @@ final class API: Sendable {
     func login(email: String, password: String) async throws {
         _ = try await isLoggedIn()
         let (data, status) = try await send("POST", "\(auth)/auth/login", body: ["email": email, "password": password])
-        if status == 200 || status == 409 { return }  // 409: allauth says a session already exists
+        if status == 200 || status == 409 { return }
         if status == 401 {
             throw APIError(message: "Login needs another step (e.g. email verification). Finish it in the web app first.")
         }
@@ -163,11 +141,9 @@ final class API: Sendable {
     }
 
     func logout() async {
-        _ = try? await send("DELETE", "\(auth)/auth/session")  // allauth answers 401 on success
+        _ = try? await send("DELETE", "\(auth)/auth/session")
         cookies.forEach(HTTPCookieStorage.shared.deleteCookie)
     }
-
-    // MARK: Threads & chat
 
     func agents() async throws -> [Agent] {
         struct R: Decodable { let agents: [Agent] }
@@ -201,7 +177,6 @@ final class API: Sendable {
         guard (200..<300).contains(status) else { throw Self.error(data, status) }
     }
 
-    /// Streams the agent reply (Vercel AI SDK UI message stream); each raw event goes to `onEvent`.
     func chat(thread: String, agent: String?, messages: [ChatMessage], onEvent: @MainActor @Sendable (JSON) throws -> Void) async throws {
         let body: [String: Any] = [
             "id": thread,

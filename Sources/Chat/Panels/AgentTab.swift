@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// The thread's agent (web: AgentTab): who answers, a picker to switch agents, this thread's
-/// numbers and memories, its actions, and the agent's configuration (instructions, tools).
-/// On a new chat it shows the selected agent, and the picker picks the agent to start with.
 struct AgentTab: View {
     let threadID: String?
 
@@ -45,8 +42,6 @@ struct AgentTab: View {
     }
 
     private struct StatsKey: Hashable { let thread: String?; let streaming: Bool }
-
-    // MARK: Sections
 
     private func header(_ id: String) -> some View {
         Section {
@@ -162,8 +157,6 @@ struct AgentTab: View {
         }
     }
 
-    // MARK: Loading
-
     private func loadAgent() async {
         guard let agentID else { return }
         info = nil
@@ -208,7 +201,6 @@ struct AgentTab: View {
     }
 }
 
-/// A tool of the agent; toolsets disclose their tools.
 private struct PanelToolRow: View {
     let tool: AgentTool
 

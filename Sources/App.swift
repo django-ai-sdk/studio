@@ -9,7 +9,6 @@ struct StudioApp: App {
 
     init() {
         #if os(macOS)
-        // Lets `swift run` (no .app bundle) get a Dock icon and keyboard focus.
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
         if Bundle.main.bundleURL.pathExtension != "app" {
@@ -29,7 +28,6 @@ struct StudioApp: App {
                 #endif
         }
         .commands {
-            // View ▸ Hide/Show Sidebar (⌃⌘S) for the system sidebar toggle.
             SidebarCommands()
             StudioCommands(store: store)
         }
@@ -43,14 +41,10 @@ struct StudioApp: App {
     }
 }
 
-/// Menu bar: File ▸ New Chat, Studio ▸ Sign Out, a Chat menu for the open thread and the
-/// thread panel's tabs in the View menu.
 struct StudioCommands: Commands {
     let store: AppStore
-    /// Published by ChatView with `.focusedSceneValue(\.threadPanel, panel)`.
     @FocusedValue(\.threadPanel) private var panel
 
-    /// The thread the Chat menu acts on: the chat on screen, if it has a thread yet.
     private var threadID: String? {
         if case .thread(let id)? = store.route { id } else { nil }
     }
@@ -61,7 +55,6 @@ struct StudioCommands: Commands {
                 .keyboardShortcut("n")
                 .disabled(store.loggedIn != true)
         }
-        // Sign Out lives in the app menu (Studio ▸ Sign Out), not in the sidebar toolbar.
         CommandGroup(after: .appInfo) {
             Button("Sign Out") { Task { await store.logout() } }
                 .disabled(store.loggedIn != true)
@@ -77,7 +70,6 @@ struct StudioCommands: Commands {
                 .disabled(threadID == nil)
         }
         CommandGroup(after: .sidebar) {
-            // Only while a chat shows its panel toggles, so the in-view shortcuts stay the fallback.
             if let panel {
                 Divider()
                 ForEach(panel.tabs) { tab in
@@ -90,11 +82,9 @@ struct StudioCommands: Commands {
 }
 
 extension FocusedValues {
-    /// The focused window's thread panel, for the View menu's tab items.
     @Entry var threadPanel: ThreadPanelState?
 }
 
-/// Sidebar destinations.
 enum Route: Hashable {
     case newChat
     case thread(String)
@@ -106,31 +96,26 @@ enum Route: Hashable {
 final class AppStore {
     static let defaultServer = "http://127.0.0.1:8000"
 
-    /// The server URL as stored; change it with `applyServer(_:)`.
     private(set) var baseURL: String
     private(set) var api: API
     var loggedIn: Bool?
-    /// The signed-in account (email or name) while signed in.
     var account: String?
     var error: String?
     var agents: [Agent] = []
     var threads: [ThreadItem] = []
     var route: Route? = .newChat
     @ObservationIgnored lazy var chat = ChatStore(app: self)
-    /// Rename / delete dialogs for a sidebar row or the Chat menu (shown by MainView).
     let threadActions = ThreadActions()
     var actionThreadID: String?
 
     init() {
         let stored = UserDefaults.standard.string(forKey: "baseURL") ?? Self.defaultServer
-        // A bad stored value (hand-edited defaults, older builds) falls back instead of crashing.
         let url = Self.serverURL(stored) ?? Self.serverURL(Self.defaultServer)
             ?? URL(fileURLWithPath: "/")
         baseURL = url.absoluteString
         api = API(base: url)
     }
 
-    /// An http(s) URL with a host, or nil.
     static func serverURL(_ text: String) -> URL? {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
@@ -138,14 +123,11 @@ final class AppStore {
         return url
     }
 
-    /// "host:port" for labels.
     var serverLabel: String {
         guard let host = api.base.host(percentEncoded: false) else { return baseURL }
         return api.base.port.map { "\(host):\($0)" } ?? host
     }
 
-    /// Switches to another server (one new `API`); signed in, it reloads from the new server.
-    /// Returns false when `text` is not a usable URL.
     @discardableResult
     func applyServer(_ text: String) -> Bool {
         guard let url = Self.serverURL(text) else { return false }
@@ -189,7 +171,6 @@ final class AppStore {
         loggedIn = false
     }
 
-    /// Forgets everything loaded for the signed-in account.
     private func clearSession() {
         account = nil
         error = nil
@@ -208,7 +189,6 @@ final class AppStore {
 
     func refreshThreads() async throws { threads = try await api.threads() }
 
-    /// Opens a fresh chat with `agent` (used by the agents screen).
     func startChat(agent: String) {
         chat.newChat(agent: agent)
         route = .newChat
@@ -222,13 +202,11 @@ final class AppStore {
         }
     }
 
-    /// Asks for a new title (sidebar context menu, Chat ▸ Rename…).
     func beginRename(_ id: String) {
         actionThreadID = id
         threadActions.beginRename(self, threadID: id)
     }
 
-    /// Asks before deleting (sidebar context menu and swipe, Chat ▸ Delete…).
     func confirmDelete(_ id: String) {
         actionThreadID = id
         threadActions.confirmingDelete = true
@@ -250,7 +228,6 @@ struct RootView: View {
     }
 }
 
-/// While the session is checked at launch: the app icon and a labelled spinner.
 private struct LaunchView: View {
     @Environment(AppStore.self) private var store
 
@@ -271,7 +248,6 @@ struct LoginView: View {
     @State private var password = ""
     @State private var busy = false
     @State private var editingServer = false
-    /// The server field edits a draft; it applies on Return or when the popover closes.
     @State private var serverDraft = ""
     @State private var serverInvalid = false
     @FocusState private var focus: Field?
@@ -295,7 +271,6 @@ struct LoginView: View {
                 }
 
                 VStack(spacing: 14) {
-                    // Apple ID–style inset group: two fields sharing one rounded container.
                     VStack(spacing: 0) {
                         TextField("Email", text: $email, prompt: Text("Email"))
                             .textContentType(.username)
@@ -387,23 +362,19 @@ struct LoginView: View {
                     }
                 }
                 .padding()
-                // Closing the popover keeps a valid edit; an invalid one is dropped.
                 .onDisappear { store.applyServer(serverDraft) }
-                // A popover on iPhone too, rather than a full sheet for one field.
                 .presentationCompactAdaptation(.popover)
             }
             .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
-            // Soft brand glow behind the icon, like Apple's onboarding screens.
             RadialGradient(colors: [StudioLogo.brandGreen.opacity(0.18), .clear],
                            center: .init(x: 0.5, y: 0.3), startRadius: 0, endRadius: 420)
                 .ignoresSafeArea()
         }
         .animation(.snappy, value: store.error)
         #if os(macOS)
-        // On iPhone the keyboard would cover half the screen before the user asked for it.
         .onAppear { focus = .email }
         #endif
     }
@@ -420,7 +391,6 @@ struct MainView: View {
     @State private var columns: NavigationSplitViewVisibility = .all
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
-    /// iPhone starts on the sidebar list; selecting a row pushes its screen.
     @State private var compactColumn: NavigationSplitViewColumn = .sidebar
     #endif
 
@@ -436,7 +406,6 @@ struct MainView: View {
             }
     }
 
-    /// iPhone has the compose button in the toolbar, so no New Chat row there.
     private var showsNewChatRow: Bool {
         #if os(iOS)
         sizeClass != .compact
@@ -491,7 +460,6 @@ struct MainView: View {
     #if os(macOS)
     private var split: some View {
         NavigationSplitView(columnVisibility: $columns) {
-            // The system sidebar toggle (toolbar, View menu, ⌃⌘S via SidebarCommands).
             sidebar
                 .navigationSplitViewColumnWidth(min: 200, ideal: 250)
         } detail: {
@@ -522,7 +490,6 @@ struct MainView: View {
             detail
         }
         .onAppear {
-            // In a collapsed split view a preselected row would not push again when tapped.
             if sizeClass == .compact && store.route == .newChat && store.chat.threadID == nil { store.route = nil }
         }
     }
@@ -536,7 +503,6 @@ struct MainView: View {
 }
 
 #if os(macOS)
-/// Studio ▸ Settings… (⌘,): the server and the signed-in account.
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @State private var serverDraft = ""

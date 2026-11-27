@@ -1,7 +1,5 @@
 import XCTest
 
-/// Smoke test: open Workflows and a workflow on iPhone, saving a screenshot after each step.
-/// Needs a signed-in session in the simulator (sign in once by hand) and the backend running.
 final class NavigationUITests: XCTestCase {
     func testOpenWorkflow() throws {
         let app = XCUIApplication()

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One declared workflow input (schemas.py `FieldDefinition`), read from the loose definition JSON.
 struct InputField: Identifiable {
     let name: String
     let type: String
@@ -8,7 +7,6 @@ struct InputField: Identifiable {
     let required: Bool
     let defaultValue: JSON?
     let options: [JSON]?
-    /// A list/str input an agent step sends as its conversation: edited as one user message.
     let conversation: Bool
 
     var id: String { name }
@@ -31,7 +29,6 @@ struct InputField: Identifiable {
         return workflow.inputFields.map { InputField(name: $0.name, field: $0.field, conversation: history.contains($0.name)) }
     }
 
-    /// The form's starting text for a field: its default, else empty.
     var initialText: String {
         guard hasDefault, let value = defaultValue else { return "" }
         if let options, let i = options.firstIndex(of: value) { return String(i) }
@@ -43,7 +40,6 @@ struct InputField: Identifiable {
     }
 }
 
-/// What the user typed, per field. Text fields, pickers (option index) and JSON all keep text.
 struct InputDraft: Equatable {
     var text: [String: String] = [:]
     var flags: [String: Bool] = [:]
@@ -55,8 +51,6 @@ struct InputDraft: Equatable {
         }
     }
 
-    /// The `inputs` body, or per-field problems. Optional fields left empty are left out,
-    /// so the engine applies their default.
     func inputs(_ fields: [InputField]) -> Result<[String: Any], InputProblems> {
         var out: [String: Any] = [:]
         var problems: [String: String] = [:]
@@ -95,12 +89,10 @@ struct InputDraft: Equatable {
 
 struct InputProblems: Error { let byField: [String: String] }
 
-/// Form rows for a workflow's declared inputs; use inside a `Form`.
 struct InputFormRows: View {
     let fields: [InputField]
     @Binding var draft: InputDraft
     let problems: [String: String]
-    /// Return in a text input (Shift-Return adds a newline), same as the chat composer.
     var onSubmit: () -> Void = {}
 
     var body: some View {
@@ -148,13 +140,11 @@ struct InputFormRows: View {
             VStack(alignment: .leading, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) { label(f) }
                     #if os(iOS)
-                    // Zero row insets put the label against the edge; line it up with section headers.
                     .padding(.horizontal, 20)
                     #endif
                 ChatStyleField(text: text(f.name), prompt: f.conversation ? "Message" : "Text", onSubmit: onSubmit)
             }
             .padding(.vertical, 8)
-            // No form cell behind it, so the field floats (raised) like the chat composer.
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         }
@@ -170,7 +160,6 @@ struct InputFormRows: View {
     }
 }
 
-/// A text input that looks like the chat composer (rounded raised surface), without its buttons.
 private struct ChatStyleField: View {
     @Binding var text: String
     let prompt: String
@@ -178,7 +167,6 @@ private struct ChatStyleField: View {
     @State private var height: CGFloat = 20
 
     var body: some View {
-        // Same metrics as Composer (text, 10pt gap, 28pt control row), minus its buttons.
         VStack(alignment: .leading, spacing: 10) {
             ComposerTextView(text: $text, height: $height, placeholder: prompt, focusKey: nil,
                              onSubmit: onSubmit, onPaste: { _ in false })

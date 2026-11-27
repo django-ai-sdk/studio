@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// A turn's policy stages in run order as a vertical timeline, with the agent between
-/// the gate and the tool calls (web: ProgressTracker in InsightsTab + OversightPipeline).
 struct OversightPipelineView: View {
     let turn: OversightTurn
 
@@ -37,7 +35,6 @@ struct OversightPipelineView: View {
     }
 }
 
-/// A leading marker on a vertical line, then content.
 private struct TimelineRow<Marker: View, Content: View>: View {
     let isLast: Bool
     @ViewBuilder let marker: Marker
@@ -108,7 +105,6 @@ struct OversightStageRow: View {
         .background(Circle().fill(.background))
     }
 
-    /// Rules first (what acted is what you came to see), then the lens answers.
     private var checks: some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -124,7 +120,6 @@ struct OversightStageRow: View {
     }
 }
 
-/// A rule match or a lens answer, as listed under a stage and drilled into.
 enum OversightCheck: Identifiable {
     case rule(OversightMatch, [OversightReview])
     case lens(OversightAnswer)
@@ -164,7 +159,6 @@ enum OversightCheck: Identifiable {
     }
 }
 
-/// One check under a stage; click for its detail in a popover.
 struct OversightCheckRow: View {
     let item: OversightCheck
     @State private var showsDetail = false
