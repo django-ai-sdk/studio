@@ -216,7 +216,7 @@ struct TypingIndicator: View {
             let t = context.date.timeIntervalSinceReferenceDate
             HStack(spacing: 5) {
                 ForEach(0..<3) { i in
-                    let phase = reduceMotion ? 0.5 : (sin((t * 2 * .pi / 1.2) - Double(i) * 0.7) + 1) / 2
+                    let phase: Double = reduceMotion ? 0.5 : Self.phase(t, dot: i)
                     Circle()
                         .fill(.secondary)
                         .frame(width: 7, height: 7)
@@ -228,6 +228,12 @@ struct TypingIndicator: View {
         .padding(.vertical, 6)
         .accessibilityElement()
         .accessibilityLabel("Assistant is typing")
+    }
+
+    /// 0…1 pulse for dot `dot` at time `t` (1.2 s period, dots 0.7 rad apart).
+    private static func phase(_ t: Double, dot: Int) -> Double {
+        let angle: Double = t * 2 * Double.pi / 1.2 - Double(dot) * 0.7
+        return (sin(angle) + 1) / 2
     }
 }
 

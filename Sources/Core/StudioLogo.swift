@@ -39,8 +39,12 @@ struct StudioLogo: View {
     // MARK: - Pixel data
 
     /// 1 = outline, 2 = dark, 3 = shade, 4 = body (brand green), 5 = light, 6 = highlight.
-    private static let palette: [Color] = [0x052F1C, 0x085743, 0x1D8352, 0x0F8D5C, 0x199C64, 0x24B66E].map {
-        Color(red: Double(($0 >> 16) & 0xFF) / 255, green: Double(($0 >> 8) & 0xFF) / 255, blue: Double($0 & 0xFF) / 255)
+    // Explicit types: Xcode 26's type checker times out on the inferred version of this.
+    private static let palette: [Color] = ([0x052F1C, 0x085743, 0x1D8352, 0x0F8D5C, 0x199C64, 0x24B66E] as [Int]).map { (hex: Int) -> Color in
+        let red = Double((hex >> 16) & 0xFF) / 255
+        let green = Double((hex >> 8) & 0xFF) / 255
+        let blue = Double(hex & 0xFF) / 255
+        return Color(red: red, green: green, blue: blue)
     }
 
     private static let columns = 48
