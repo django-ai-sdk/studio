@@ -1,0 +1,60 @@
+[project]
+name = "django-ai-sdk-studio"
+version = "0.0.0"
+description = "Django projects built on django-ai-sdk."
+requires-python = ">=3.12"
+dependencies = [
+  "django-ai-sdk[qdrant,mcp,files,dbos]",
+  "ai-sdk-demo-base",
+  "daphne>=4.2.3",
+  "ddgs-haystack>=2.0.0",
+  "django-allauth[headless]>=65.22.1",
+  "django-cors-headers>=4.9.0",
+  "django-environ>=0.14.0",
+  "django-ninja>=1.8.0",
+  "django-tasks-db>=0.13.0",
+  "django-watchfiles>=1.4.0",
+  "djangorestframework>=3.18.3",
+  "trafilatura>=2.3.1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.2.0",
+  "pytest-asyncio>=1.5.0",
+  "pytest-django>=4.14.0",
+  "ruff>=0.17.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+django-ai-sdk = { path = "../../sdk", editable = true }
+ai-sdk-demo-base = { path = "base", editable = true }
+
+[tool.ruff]
+line-length = 100
+exclude = ["**/tests/**", "**/conftest.py"]
+src = ["studio", "base"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "ANN", "TCH"]
+ignore = ["ANN401", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/settings.py" = ["E402", "F403", "F405"]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["ninja.Schema", "pydantic.BaseModel"]
+runtime-evaluated-decorators = [
+  "ninja.Router.get",
+  "ninja.Router.post",
+  "ninja.Router.put",
+  "ninja.Router.patch",
+  "ninja.Router.delete",
+]

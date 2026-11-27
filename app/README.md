@@ -1,8 +1,8 @@
 # Demos
 
 Django projects built on django-ai-sdk. Each folder is a standalone project with its
-own settings, URLs, database and tests; CI runs every demo's tests (`make test-demos`)
-so they keep working as the SDK changes.
+own settings, URLs, database and tests. They run against the SDK checked out next to
+this repository (`../../sdk` from `app/`).
 
 | Demo | What it shows |
 |---|---|
@@ -12,11 +12,11 @@ so they keep working as the SDK changes.
 
 ## Run a demo
 
-From the repository root:
+From `app/`:
 
 ```bash
-make setup                 # installs the SDK and demo_base (both editable) plus the demo stack
-cd demos/studio
+uv sync                    # installs the SDK and demo_base (both editable) plus the demo stack
+cd studio
 # create .env with OPENAI_API_KEY / OPENAI_API_URL (and DEBUG=True for dev)
 make reset                 # fresh SQLite db + demo data
 make run                   # http://localhost:8000; PORT=8001 make run for a second demo
@@ -28,7 +28,7 @@ several can run side by side on different ports.
 ## Add a demo
 
 ```
-demos/<name>/
+app/<name>/
   manage.py          DJANGO_SETTINGS_MODULE=<name>.settings
   <name>/            settings.py, urls.py, asgi.py, wsgi.py
   apps/              the demo's own Django apps
@@ -50,7 +50,4 @@ INSTALLED_APPS = [*INSTALLED_APPS, "apps.<yours>"]
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 ```
 
-`make test-demos` picks up every folder with a `manage.py`. Demos import the SDK and
-`demo_base` as installed packages, never via `sys.path`.
-
-Heads-up: if your global gitignore ignores `demos/`, add new demo files with `git add -f`.
+Demos import the SDK and `demo_base` as installed packages, never via `sys.path`.

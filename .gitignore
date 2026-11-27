@@ -6,3 +6,13 @@ mac/iOS/StudioiOS.xcodeproj/
 .claude/skills/
 plans/
 skills-lock.json
+.DS_Store
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+.env
+db.sqlite3*
+logs/
+app/*/memories
+app/*/stores
