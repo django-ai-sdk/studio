@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Liquid Glass APIs need the Xcode 26+ SDK; pick the newest Xcode 26+ on the image.
+      - name: Select Xcode
+        run: |
+          # shellcheck disable=SC2012 # Xcode_26.x.app names are plain; ls + sort -V is fine here.
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_2[6-9]*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      # Tag v0.1.0-alpha.1 → VERSION 0.1.0-alpha.1 (CFBundleShortVersionString 0.1.0),
+      # BUILD = run number (CFBundleVersion). Unsigned: ad-hoc codesign, not notarized.
+      - name: Build DMG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          make dmg VERSION="$VERSION" BUILD=${{ github.run_number }}
+
+      - name: Checksum
+        working-directory: build
+        run: shasum -a 256 "Studio-$VERSION.dmg" > SHA256SUMS && cat SHA256SUMS
+
+      # A tag with a hyphen (v0.1.0-alpha.1) is a pre-release. --notes-file is prepended
+      # to the generated notes (install steps first, then the changes since the last tag).
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" "build/Studio-$VERSION.dmg" build/SHA256SUMS \
+            --title "Studio $VERSION" \
+            --generate-notes --notes-file .github/release-notes.md \
+            "${prerelease[@]}"
