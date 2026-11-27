@@ -30,7 +30,7 @@ struct OversightTurn: Decodable, Identifiable, Hashable {
     var isDetail: Bool { answers != nil }
     var closed: Bool { status == "closed" }
     var reflecting: Bool { ["pending", "running"].contains(reflect_state ?? "") }
-    var createdAt: Date? { OversightDate.parse(created_at) }
+    var createdAt: Date? { ISODate.parse(created_at) }
 }
 
 struct OversightMatch: Decodable, Identifiable, Hashable {
@@ -83,7 +83,7 @@ enum OversightUnavailable: Error, Equatable {
     case forbidden(String)
 }
 
-enum OversightDate {
+enum ISODate {
     private static let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
     private static let plain = Date.ISO8601FormatStyle()
 

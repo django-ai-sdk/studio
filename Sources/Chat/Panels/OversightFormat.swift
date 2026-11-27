@@ -24,11 +24,11 @@ enum OversightFormat {
     }
 
     static func time(_ iso: String) -> String {
-        OversightDate.parse(iso)?.formatted(date: .omitted, time: .shortened) ?? ""
+        ISODate.parse(iso)?.formatted(date: .omitted, time: .shortened) ?? ""
     }
 
     static func when(_ iso: String) -> String {
-        OversightDate.parse(iso)?.formatted(.dateTime.month(.abbreviated).day().hour().minute()) ?? ""
+        ISODate.parse(iso)?.formatted(.dateTime.month(.abbreviated).day().hour().minute()) ?? ""
     }
 
     static func value(_ value: JSON?) -> String {

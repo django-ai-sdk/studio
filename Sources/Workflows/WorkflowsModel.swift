@@ -99,6 +99,3 @@ final class WorkflowsModel {
     }
 }
 
-enum ISODate {
-    static func parse(_ s: String?) -> Date? { OversightDate.parse(s) }
-}

@@ -174,11 +174,11 @@ enum TraceBuilder {
             let visible = showHooks ? group : group.filter { kind(of: $0) != .hook }
             guard !visible.isEmpty else { continue }
             let roots = tree(visible, all: byID)
-            let starts = group.compactMap { TraceDate.parse($0.started_at) }
+            let starts = group.compactMap { ISODate.parse($0.started_at) }
             guard let start = starts.min() else { continue }
             let ends = group.compactMap { span -> Date? in
-                if let e = span.ended_at.flatMap(TraceDate.parse) { return e }
-                guard let s = TraceDate.parse(span.started_at) else { return nil }
+                if let e = span.ended_at.flatMap(ISODate.parse) { return e }
+                guard let s = ISODate.parse(span.started_at) else { return nil }
                 return s.addingTimeInterval((span.duration_ms ?? 0) / 1000)
             }
             let end = max(ends.max() ?? start, start)
@@ -235,7 +235,7 @@ enum TraceBuilder {
     }
 
     private static func earlier(_ a: TraceSpanOut, _ b: TraceSpanOut) -> Bool {
-        let (x, y) = (TraceDate.parse(a.started_at) ?? .distantPast, TraceDate.parse(b.started_at) ?? .distantPast)
+        let (x, y) = (ISODate.parse(a.started_at) ?? .distantPast, ISODate.parse(b.started_at) ?? .distantPast)
         return x == y ? (a.duration_ms ?? 0) > (b.duration_ms ?? 0) : x < y
     }
 
@@ -280,9 +280,9 @@ enum TraceBuilder {
         case .other:
             title = span.operation_name.split(separator: ".").suffix(2).joined(separator: " ").replacingOccurrences(of: "_", with: " ").capitalized
         }
-        let start = TraceDate.parse(span.started_at) ?? .distantPast
+        let start = ISODate.parse(span.started_at) ?? .distantPast
         return TraceNode(span: span, kind: k, title: title, detail: detail, start: start,
-                         end: span.ended_at.flatMap(TraceDate.parse), error: errorText(span))
+                         end: span.ended_at.flatMap(ISODate.parse), error: errorText(span))
     }
 
     static func kind(of span: TraceSpanOut) -> TraceSpanKind {
@@ -356,8 +356,8 @@ enum TraceBuilder {
     }
 
     private static func pairCosts(_ costs: [TraceTurnCost], answers: [ChatMessage]) -> [String: Double] {
-        let rows = costs.compactMap { c in TraceDate.parse(c.created_at).map { (c, $0) } }.sorted { $0.1 < $1.1 }
-        let dated = answers.compactMap { m in m.meta?["created_at"]?.string.flatMap(TraceDate.parse).map { (m.id, $0) } }
+        let rows = costs.compactMap { c in ISODate.parse(c.created_at).map { (c, $0) } }.sorted { $0.1 < $1.1 }
+        let dated = answers.compactMap { m in m.meta?["created_at"]?.string.flatMap(ISODate.parse).map { (m.id, $0) } }
         var result: [String: Double] = [:]
         var next = 0
         for (row, start) in rows {
@@ -367,23 +367,6 @@ enum TraceBuilder {
             next += 1
         }
         return result
-    }
-}
-
-enum TraceDate {
-    nonisolated(unsafe) private static let fractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-    nonisolated(unsafe) private static let plain = ISO8601DateFormatter()
-
-    static func parse(_ string: String) -> Date? {
-        if let d = fractional.date(from: string) ?? plain.date(from: string) { return d }
-        guard let dot = string.firstIndex(of: ".") else { return nil }
-        let digits = string[string.index(after: dot)...].prefix { $0.isNumber }
-        let trimmed = string[..<dot] + "." + digits.prefix(3) + string[digits.endIndex...]
-        return fractional.date(from: String(trimmed))
     }
 }
 
