@@ -22,7 +22,7 @@ enum StreamReducer {
             let kind = type == "text-delta" ? "text" : "reasoning"
             let delta = event["delta"]?.string ?? ""
             let i = scratch.index(key, block: event["id"]?.string ?? "")
-                ?? openFallback(kind, in: &message, scratch: scratch, block: event["id"]?.string ?? "")
+                ?? partForDeltaWithoutStart(kind, in: &message, scratch: scratch, block: event["id"]?.string ?? "")
             guard message.parts.indices.contains(i) else { return }
             message.parts[i]["text"] = .string((message.parts[i]["text"]?.string ?? "") + delta)
 
@@ -127,7 +127,7 @@ enum StreamReducer {
         message.meta?[key] = value
     }
 
-    private static func openFallback(_ kind: String, in message: inout ChatMessage, scratch: StreamScratch, block: String) -> Int {
+    private static func partForDeltaWithoutStart(_ kind: String, in message: inout ChatMessage, scratch: StreamScratch, block: String) -> Int {
         if let i = message.parts.indices.last, message.parts[i]["type"]?.string == kind,
            message.parts[i]["state"]?.string != "done" {
             return i
