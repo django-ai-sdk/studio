@@ -25,11 +25,13 @@ jobs:
 
       # Tag v0.1.0a1 → VERSION 0.1.0a1 (CFBundleShortVersionString 0.1.0),
       # BUILD = run number (CFBundleVersion). Unsigned: ad-hoc codesign, not notarized.
+      - uses: extractions/setup-just@v4
+
       - name: Build DMG
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          make dmg VERSION="$VERSION" BUILD=${{ github.run_number }}
+          just dmg "$VERSION" ${{ github.run_number }}
 
       - name: Checksum
         working-directory: mac/build

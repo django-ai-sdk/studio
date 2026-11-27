@@ -8,7 +8,7 @@ First alpha. macOS DMG on GitHub Releases; iPhone and iPad build from source.
 - **Thread panel:** Oversight, Trace, Sources, Agent and Browser.
 - **Agents:** overview, detail and builder.
 - **Workflows:** run with a generated input form, follow runs live, approvals.
-- **iPhone and iPad:** build from source with `make ios-run` or Xcode.
+- **iPhone and iPad:** build from source with `just mac::ios-run` or Xcode.
 
 ### Known limitations
 

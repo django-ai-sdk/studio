@@ -1,0 +1,19 @@
+default:
+    @just --list
+
+[doc("Fresh SQLite db with the demo memories and agents")]
+reset:
+    rm -f db.sqlite3
+    uv run python manage.py migrate
+    uv run python manage.py load_demo_memories
+    uv run python manage.py load_demo_agents
+
+[doc("Dev server, for example: just app::run 8001")]
+run port="8000":
+    uv run python manage.py runserver {{port}}
+
+db:
+    uv run sqlite_web db.sqlite3
+
+test:
+    uv run pytest -v

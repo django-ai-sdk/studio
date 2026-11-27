@@ -34,10 +34,12 @@ jobs:
           key: spm-${{ runner.os }}-${{ hashFiles('mac/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
+      - uses: extractions/setup-just@v4
+
       - name: Build macOS app
         run: swift build
 
       - name: Build iOS app (simulator)
         run: |
           brew install xcodegen
-          make ios-build
+          just ios-build

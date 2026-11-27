@@ -1,0 +1,62 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+app_bundle := "build/Studio.app"
+swift_release := "swift build -c release --arch arm64 --arch x86_64"
+ios_project := "iOS/StudioiOS.xcodeproj"
+ios_derived := "build/ios"
+ios_bundle_id := "nl.django-ai-sdk.studio.ios"
+ios_app := ios_derived / "Build/Products/Debug-iphonesimulator/Studio.app"
+
+default:
+    @just --list
+
+[doc("Debug build, then launch")]
+run:
+    swift run
+
+[doc("Universal, ad-hoc signed build/Studio.app, for example: just mac::app 0.1.0a1 7")]
+app version="0.0.0" build="0":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{swift_release}}
+    bin="$({{swift_release}} --show-bin-path)"
+    rm -rf {{app_bundle}} && mkdir -p {{app_bundle}}/Contents/MacOS {{app_bundle}}/Contents/Resources
+    vtool -set-build-version macos 15.0 "$(xcrun --show-sdk-version)" -replace \
+        -output {{app_bundle}}/Contents/MacOS/Studio "$bin/Studio"
+    cp Info.plist {{app_bundle}}/Contents/
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString {{replace_regex(version, '^([0-9]+(\.[0-9]+)*).*', '$1')}}" {{app_bundle}}/Contents/Info.plist
+    /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string {{build}}" {{app_bundle}}/Contents/Info.plist
+    cp Resources/AppIcon.icns {{app_bundle}}/Contents/Resources/
+    cp -R "$bin"/*.bundle {{app_bundle}}/Contents/Resources/
+    codesign --force --sign - {{app_bundle}}
+    echo "Built {{app_bundle}} {{version}} ({{build}}), $(lipo -archs {{app_bundle}}/Contents/MacOS/Studio)"
+
+[doc("Drag-to-install build/Studio-<version>.dmg")]
+dmg version="0.0.0" build="0": (app version build)
+    rm -rf build/dmg build/Studio-{{version}}.dmg && mkdir -p build/dmg
+    cp -R {{app_bundle}} build/dmg/
+    ln -s /Applications build/dmg/Applications
+    hdiutil create -volname Studio -srcfolder build/dmg -ov -format UDZO build/Studio-{{version}}.dmg
+    rm -rf build/dmg
+    @echo "Built build/Studio-{{version}}.dmg"
+
+[doc("Generate iOS/StudioiOS.xcodeproj")]
+ios-project:
+    cd iOS && xcodegen generate
+
+[doc("Build for the iOS Simulator, no signing")]
+ios-build version="0.0.0" build="0": ios-project
+    xcodebuild -project {{ios_project}} -scheme Studio -configuration Debug \
+        -destination 'generic/platform=iOS Simulator' -derivedDataPath {{ios_derived}} \
+        MARKETING_VERSION={{replace_regex(version, '^([0-9]+(\.[0-9]+)*).*', '$1')}} CURRENT_PROJECT_VERSION={{build}} \
+        CODE_SIGNING_ALLOWED=NO build
+
+[doc("Build, boot the simulator, install and launch, for example: just mac::ios-run \"iPad Pro 13-inch (M5)\"")]
+ios-run sim="iPhone 17": ios-build
+    xcrun simctl boot "{{sim}}" 2>/dev/null || true
+    open -b com.apple.dt.Devices 2>/dev/null || open -a Simulator 2>/dev/null || true
+    xcrun simctl install "{{sim}}" {{ios_app}}
+    xcrun simctl launch "{{sim}}" {{ios_bundle_id}}
+
+clean:
+    rm -rf .build build

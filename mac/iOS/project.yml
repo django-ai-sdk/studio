@@ -1,4 +1,4 @@
-# XcodeGen spec for the iPhone/iPad app. Generate with `make ios-project` (xcodegen generate).
+# XcodeGen spec for the iPhone/iPad app. Generate with `just mac::ios-project` (xcodegen generate).
 # The iOS target compiles the same ../Sources as the macOS app; platform differences use #if os(...).
 name: StudioiOS
 options:

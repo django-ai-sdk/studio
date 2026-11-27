@@ -28,12 +28,13 @@ directly, not the Next.js proxy). Changes are in [CHANGELOG.md](CHANGELOG.md).
 ## Build from source
 
 ```sh
-make run   # swift run, dev build
-make app   # build/Studio.app (universal, ad-hoc signed)
-make dmg   # build/Studio-<version>.dmg
+just mac::run   # swift run, dev build
+just mac::app   # mac/build/Studio.app (universal, ad-hoc signed)
+just mac::dmg   # mac/build/Studio-<version>.dmg
 ```
 
-Needs macOS 15+ and Xcode 26 or later (the Liquid Glass APIs need its SDK).
+Run from the repository root, or drop the `mac::` prefix inside `mac/`.
+Needs [just](https://just.systems/), macOS 15+ and Xcode 26 or later (the Liquid Glass APIs need its SDK).
 
 ## iPhone and iPad
 
@@ -43,10 +44,10 @@ The generated `iOS/StudioiOS.xcodeproj` is not checked in. Needs Xcode and
 `brew install xcodegen`.
 
 ```sh
-make ios-project   # generate iOS/StudioiOS.xcodeproj (then open it in Xcode to run on a device)
-make ios-build     # build for the iOS Simulator (no signing)
-make ios-run       # build, boot the "iPhone 17" simulator, install, launch and open Device Hub
-make ios-run IOS_SIM="iPad Pro 13-inch (M5)"
+just mac::ios-project   # generate mac/iOS/StudioiOS.xcodeproj (then open it in Xcode to run on a device)
+just mac::ios-build     # build for the iOS Simulator (no signing)
+just mac::ios-run       # build, boot the "iPhone 17" simulator, install, launch and open Device Hub
+just mac::ios-run "iPad Pro 13-inch (M5)"
 ```
 
 - **Server:** the simulator shares the Mac's network, so the default
@@ -75,10 +76,10 @@ git tag v0.1.0a1 && git push origin v0.1.0a1
 - A tag with a letter in the version (`a1`, `b2`, `rc1`) is published as a pre-release.
 - Add the version to `CHANGELOG.md` first.
 
-To build the same DMG locally (defaults: `VERSION=0.0.0`, `BUILD=0`):
+To build the same DMG locally (version and build default to `0.0.0` and `0`):
 
 ```sh
-make dmg VERSION=0.1.0a1 BUILD=7
+just mac::dmg 0.1.0a1 7
 ```
 
 ## Auth workaround

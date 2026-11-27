@@ -12,14 +12,13 @@ this repository (`../../sdk` from `app/`).
 
 ## Run a demo
 
-From `app/`:
+From the repository root, with [uv](https://docs.astral.sh/uv/) and [just](https://just.systems/):
 
 ```bash
-uv sync                    # installs the SDK and demo_base (both editable) plus the demo stack
-cd studio
-# create .env with OPENAI_API_KEY / OPENAI_API_URL (and DEBUG=True for dev)
-make reset                 # fresh SQLite db + demo data
-make run                   # http://localhost:8000; PORT=8001 make run for a second demo
+# create app/studio/.env with OPENAI_API_KEY / OPENAI_API_URL (and DEBUG=True for dev)
+just app::reset            # installs the SDK and demo_base (both editable), fresh SQLite db + demo data
+just app::run              # http://localhost:8000; just app::run 8001 for a second demo
+just app::test
 ```
 
 Every demo keeps its own `db.sqlite3`, uploads and vector stores in its folder, so
@@ -34,7 +33,7 @@ app/<name>/
   apps/              the demo's own Django apps
   tests/
   pytest.ini         DJANGO_SETTINGS_MODULE = <name>.settings
-  Makefile           reset / run / test targets (copy studio's)
+  justfile           reset / run / test recipes (copy studio's)
 ```
 
 Its `settings.py` loads its own `.env`, then builds on the shared settings:

@@ -9,12 +9,12 @@ resolution-markers = [
     "python_full_version == '3.14.*' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
     "python_full_version == '3.14.*' and platform_python_implementation != 'PyPy' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
-    "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
+    "python_full_version < '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
+    "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
     "python_full_version < '3.13' and platform_python_implementation != 'PyPy' and sys_platform != 'win32'",
 ]
 
@@ -152,8 +152,8 @@ resolution-markers = [
     "python_full_version == '3.14.*' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform == 'win32'",
     "python_full_version < '3.13' and platform_python_implementation == 'PyPy' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bd/cb/09939728be094d155b5d4ac262e39877875f5f7e36eea66beb359f647bd0/cbor2-5.9.0.tar.gz", hash = "sha256:85c7a46279ac8f226e1059275221e6b3d0e370d2bb6bd0500f9780781615bcea", size = 111231, upload-time = "2026-03-22T15:56:50.638Z" }
@@ -191,8 +191,8 @@ resolution-markers = [
     "python_full_version == '3.14.*' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and platform_python_implementation != 'PyPy' and sys_platform != 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
-    "python_full_version < '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and platform_python_implementation != 'PyPy' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_python_implementation != 'PyPy' and sys_platform == 'win32'",
     "python_full_version < '3.13' and platform_python_implementation != 'PyPy' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/df/61/be007e3421969a4a318b486e4eaf4205872bbc1baf063ea7e679f74015cf/cbor2-6.3.0.tar.gz", hash = "sha256:fd4d6b3533e966eec3fb33ce0f17e925fc09b512500ab7770867ebec7d7d5dc1", size = 105625, upload-time = "2026-11-13T22:58:56.425Z" }
@@ -789,19 +789,6 @@ dev = [
 docs = [
     { name = "dokk", extras = ["format", "search", "serve"], specifier = ">=0.0.5" },
     { name = "graphviz", specifier = ">=0.21" },
-]
-studio = [
-    { name = "ai-sdk-demo-base", editable = "../../sdk/demos/base" },
-    { name = "daphne", specifier = ">=4.2.3" },
-    { name = "ddgs-haystack", specifier = ">=2.0.0" },
-    { name = "django-allauth", extras = ["headless"], specifier = ">=65.22.1" },
-    { name = "django-cors-headers", specifier = ">=4.9.0" },
-    { name = "django-environ", specifier = ">=0.14.0" },
-    { name = "django-ninja", specifier = ">=1.8.0" },
-    { name = "django-tasks-db", specifier = ">=0.13.0" },
-    { name = "django-watchfiles", specifier = ">=1.4.0" },
-    { name = "djangorestframework", specifier = ">=3.18.3" },
-    { name = "trafilatura", specifier = ">=2.3.1" },
 ]
 
 [[package]]
