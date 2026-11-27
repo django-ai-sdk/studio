@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Liquid Glass APIs need the Xcode 26+ SDK; pick the newest Xcode 26+ on the image.
+      - name: Select Xcode
+        run: |
+          # shellcheck disable=SC2012 # Xcode_26.x.app names are plain; ls + sort -V is fine here.
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_2[6-9]*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build macOS app
+        run: swift build
+
+      - name: Build iOS app (simulator)
+        run: |
+          brew install xcodegen
+          make ios-build
