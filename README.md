@@ -7,13 +7,33 @@ Native SwiftUI client for the Django AI SDK API.
 - **Agents:** browse, inspect, start a chat, and build your own agents (tools, settings, access).
 - **Workflows:** run a workflow with a generated input form and follow the run live.
 
+## Install
+
+Requires macOS 15 or later (Apple silicon or Intel) and a running Django AI SDK server.
+
+1. Download `Studio-<version>.dmg` from
+   [GitHub Releases](https://github.com/django-ai-sdk/studio/releases), open it and drag
+   **Studio** to **Applications**.
+2. The alpha is not notarized, so macOS blocks the first launch. Open Studio once, then go to
+   **System Settings ▸ Privacy & Security** and click **Open Anyway**. On macOS 15 and later,
+   right-click ▸ Open no longer skips this step. Or, in Terminal:
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/Studio.app
+   ```
+
+The server URL is on the login screen (default `http://127.0.0.1:8000`, the Django backend
+directly, not the Next.js proxy). Changes are in [CHANGELOG.md](CHANGELOG.md).
+
+## Build from source
+
 ```sh
 make run   # swift run, dev build
-make app   # build/Studio.app (ad-hoc signed)
+make app   # build/Studio.app (universal, ad-hoc signed)
+make dmg   # build/Studio-<version>.dmg
 ```
 
-Needs macOS 15+ and Xcode command line tools. The server URL is on the login screen
-(default `http://127.0.0.1:8000`, the Django backend directly, not the Next.js proxy).
+Needs macOS 15+ and Xcode 26 or later (the Liquid Glass APIs need its SDK).
 
 ## iPhone and iPad
 
@@ -40,6 +60,26 @@ make ios-run IOS_SIM="iPad Pro 13-inch (M5)"
   chats; pull to refresh, swipe to delete) and each row pushes its screen. Sign Out is in
   the account menu. On iPad the sidebar and the screen sit side by side. Workflows push the
   form on iPhone and show list and form side by side on iPad; a run opens in a sheet.
+
+## Releasing
+
+Push a tag; CI builds the DMG and publishes a GitHub release with it and `SHA256SUMS`.
+
+```sh
+git tag v0.1.0-alpha.1 && git push origin v0.1.0-alpha.1
+```
+
+- The tag is the version. `v0.1.0-alpha.1` gives `Studio-0.1.0-alpha.1.dmg`.
+- Its numeric part (`0.1.0`) becomes `CFBundleShortVersionString` (and the iOS
+  `MARKETING_VERSION`); the CI run number becomes `CFBundleVersion`.
+- A tag with a hyphen (`-alpha.1`, `-beta.2`) is published as a pre-release.
+- Add the version to `CHANGELOG.md` first.
+
+To build the same DMG locally (defaults: `VERSION=0.0.0`, `BUILD=0`):
+
+```sh
+make dmg VERSION=0.1.0-alpha.1 BUILD=7
+```
 
 ## Auth workaround
 
