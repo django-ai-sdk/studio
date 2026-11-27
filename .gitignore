@@ -1,0 +1,8 @@
+.build/
+.build-*/
+build/
+.swiftpm/
+iOS/StudioiOS.xcodeproj/
+.claude/skills/
+plans/
+skills-lock.json
