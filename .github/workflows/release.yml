@@ -20,7 +20,7 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode_2[7-9]*.app | sort -V | tail -1)"
           xcodebuild -version
 
-      # Tag v0.1.0-alpha.1 → VERSION 0.1.0-alpha.1 (CFBundleShortVersionString 0.1.0),
+      # Tag v0.1.0a1 → VERSION 0.1.0a1 (CFBundleShortVersionString 0.1.0),
       # BUILD = run number (CFBundleVersion). Unsigned: ad-hoc codesign, not notarized.
       - name: Build DMG
         run: |
@@ -32,14 +32,14 @@ jobs:
         working-directory: build
         run: shasum -a 256 "Studio-$VERSION.dmg" > SHA256SUMS && cat SHA256SUMS
 
-      # A tag with a hyphen (v0.1.0-alpha.1) is a pre-release. --notes-file is prepended
+      # A tag with a letter in the version (v0.1.0a1, v0.1.0b2, v0.1.0rc1) is a pre-release. --notes-file is prepended
       # to the generated notes (install steps first, then the changes since the last tag).
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           prerelease=()
-          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+          [[ "${GITHUB_REF_NAME#v}" =~ [A-Za-z] ]] && prerelease=(--prerelease)
           gh release create "$GITHUB_REF_NAME" "build/Studio-$VERSION.dmg" build/SHA256SUMS \
             --title "Studio $VERSION" \
             --generate-notes --notes-file .github/release-notes.md \

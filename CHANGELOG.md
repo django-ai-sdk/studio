@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-alpha.1
+## 0.1.0a1
 
 First alpha. macOS DMG on GitHub Releases; iPhone and iPad build from source.
 

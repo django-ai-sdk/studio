@@ -66,19 +66,19 @@ make ios-run IOS_SIM="iPad Pro 13-inch (M5)"
 Push a tag; CI builds the DMG and publishes a GitHub release with it and `SHA256SUMS`.
 
 ```sh
-git tag v0.1.0-alpha.1 && git push origin v0.1.0-alpha.1
+git tag v0.1.0a1 && git push origin v0.1.0a1
 ```
 
-- The tag is the version. `v0.1.0-alpha.1` gives `Studio-0.1.0-alpha.1.dmg`.
+- The tag is the version. `v0.1.0a1` gives `Studio-0.1.0a1.dmg`.
 - Its numeric part (`0.1.0`) becomes `CFBundleShortVersionString` (and the iOS
   `MARKETING_VERSION`); the CI run number becomes `CFBundleVersion`.
-- A tag with a hyphen (`-alpha.1`, `-beta.2`) is published as a pre-release.
+- A tag with a letter in the version (`a1`, `b2`, `rc1`) is published as a pre-release.
 - Add the version to `CHANGELOG.md` first.
 
 To build the same DMG locally (defaults: `VERSION=0.0.0`, `BUILD=0`):
 
 ```sh
-make dmg VERSION=0.1.0-alpha.1 BUILD=7
+make dmg VERSION=0.1.0a1 BUILD=7
 ```
 
 ## Auth workaround

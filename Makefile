@@ -1,10 +1,10 @@
 APP := build/Studio.app
 
-# Release version. VERSION is the full tag without the "v" (0.1.0-alpha.1), BUILD the CI run number.
-# CFBundleShortVersionString / MARKETING_VERSION get only the numeric part (0.1.0).
+# Release version. VERSION is the full tag without the "v" (0.1.0a1), BUILD the CI run number.
+# CFBundleShortVersionString / MARKETING_VERSION get only the leading numeric part (0.1.0).
 VERSION ?= 0.0.0
 BUILD ?= 0
-SHORT_VERSION = $(firstword $(subst -, ,$(subst +, ,$(VERSION))))
+SHORT_VERSION = $(shell echo '$(VERSION)' | sed -E 's/^([0-9]+(\.[0-9]+)*).*/\1/')
 DMG = build/Studio-$(VERSION).dmg
 
 # Universal (arm64 + x86_64) release build. The output folder differs per SwiftPM version
