@@ -19,11 +19,6 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "ai-sdk-demo-base"
-version = "0.0.0"
-source = { editable = "base" }
-
-[[package]]
 name = "aiofiles"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -796,7 +791,6 @@ name = "django-ai-sdk-studio"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "ai-sdk-demo-base" },
     { name = "daphne" },
     { name = "ddgs-haystack" },
     { name = "django-ai-sdk", extra = ["dbos", "files", "mcp", "qdrant"] },
@@ -820,7 +814,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ai-sdk-demo-base", editable = "base" },
     { name = "daphne", specifier = ">=4.2.3" },
     { name = "ddgs-haystack", specifier = ">=2.0.0" },
     { name = "django-ai-sdk", extras = ["qdrant", "mcp", "files", "dbos"], editable = "../../sdk" },

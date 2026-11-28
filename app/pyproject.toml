@@ -1,11 +1,10 @@
 [project]
 name = "django-ai-sdk-studio"
 version = "0.0.0"
-description = "Django projects built on django-ai-sdk."
+description = "Studio, a Django project built on django-ai-sdk."
 requires-python = ">=3.12"
 dependencies = [
   "django-ai-sdk[qdrant,mcp,files,dbos]",
-  "ai-sdk-demo-base",
   "daphne>=4.2.3",
   "ddgs-haystack>=2.0.0",
   "django-allauth[headless]>=65.22.1",
@@ -29,22 +28,25 @@ dev = [
 [tool.uv]
 package = false
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::PendingDeprecationWarning"]
+
 [tool.uv.sources]
 django-ai-sdk = { path = "../../sdk", editable = true }
-ai-sdk-demo-base = { path = "base", editable = true }
 
 [tool.ruff]
 line-length = 100
 exclude = ["**/tests/**", "**/conftest.py"]
-src = ["studio", "base"]
+src = ["."]
 target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "ANN", "TCH"]
 ignore = ["ANN401", "E501"]
-
-[tool.ruff.lint.per-file-ignores]
-"**/settings.py" = ["E402", "F403", "F405"]
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]

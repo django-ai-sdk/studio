@@ -1,4 +1,4 @@
-mod app 'app/studio'
+mod app
 mod mac
 
 default:

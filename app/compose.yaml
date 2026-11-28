@@ -2,8 +2,8 @@ name: studio
 
 x-app: &app
   image: ghcr.io/astral-sh/uv:0.13-python3.13-trixie-slim
-  working_dir: /src/app/studio
-  env_file: studio/.env
+  working_dir: /src/app
+  env_file: .env
   environment:
     SDK: pypi
     UV_PROJECT_ENVIRONMENT: /venv
@@ -16,7 +16,6 @@ x-app: &app
 services:
   web:
     <<: *app
-    working_dir: /src/app
     command:
       - sh
       - -euc
@@ -28,7 +27,6 @@ services:
           uv export --frozen --no-dev --no-hashes --no-emit-package django-ai-sdk -o /tmp/requirements.txt
           uv pip install --python /venv --prerelease allow --reinstall-package django-ai-sdk -r /tmp/requirements.txt "django-ai-sdk[qdrant,mcp,files,dbos]"
         fi
-        cd studio
         /venv/bin/python manage.py migrate
         exec /venv/bin/python manage.py runserver 0.0.0.0:8000
     ports: ["${PORT:-8000}:8000"]

@@ -14,5 +14,5 @@ __pycache__/
 .env
 db.sqlite3*
 logs/
-app/*/memories
-app/*/stores
+app/memories/
+app/stores/

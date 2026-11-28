@@ -1,0 +1,35 @@
+default:
+    @just --list
+
+[doc("Fresh SQLite db with the demo memories and agents")]
+reset:
+    rm -f db.sqlite3
+    uv run python manage.py migrate
+    uv run python manage.py load_demo_memories
+    uv run python manage.py load_demo_agents
+
+[doc("Dev server, for example: just app::run 8001")]
+run port="8000":
+    uv run python manage.py runserver {{port}}
+
+db:
+    uv run sqlite_web db.sqlite3
+
+test:
+    uv run pytest -v
+
+[doc("Workflow worker on DBOS")]
+worker:
+    uv run python manage.py ai_sdk_worker
+
+[doc("Web and worker in Docker; sdk is pypi or a local SDK path, relative to app/ (default ../../sdk)")]
+up sdk="../../sdk":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{sdk}}" = pypi ]; then
+        exec docker compose up
+    fi
+    SDK_PATH="$(cd "{{sdk}}" && pwd)" exec docker compose -f compose.yaml -f compose.sdk.yaml up
+
+down:
+    docker compose down
