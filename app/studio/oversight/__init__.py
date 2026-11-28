@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django_ai_sdk.oversight import (
+    DEFAULT_PII_KINDS,
     Alert,
     Choice,
     JudgeLens,
@@ -18,6 +19,12 @@ from django_ai_sdk.oversight import (
     Stage,
     Subject,
     register_policy,
+)
+
+from studio.oversight.dutch import (
+    DUTCH_PII_KINDS,
+    INJECTION_PATTERNS_EN_NL,
+    SECRET_PATTERNS_EN_NL,
 )
 
 LEGAL_WORDS = {
@@ -61,15 +68,18 @@ class StudioPolicy(Policy):
         "Checks every question, tool call and answer for prompt injection, "
         "secrets, personal data and legal risk."
     )
+    # The security pack's lenses, with Dutch added to their tables. The names stay, so
+    # the pack's rules below read them as they are.
     lenses = [
         LensPack(
             SecurityPack.lenses,
             "injection_question",
-            "secrets_question",
-            "pii_question",
-            "secrets_tool_call",
-            "pii_answer",
+            judges=[PatternJudge(INJECTION_PATTERNS_EN_NL), Maybe("classifier")],
         ),
+        LensPack(SecurityPack.lenses, "secrets_question", patterns=SECRET_PATTERNS_EN_NL),
+        LensPack(SecurityPack.lenses, "pii_question", kinds=[*DEFAULT_PII_KINDS, *DUTCH_PII_KINDS]),
+        LensPack(SecurityPack.lenses, "secrets_tool_call", patterns=SECRET_PATTERNS_EN_NL),
+        LensPack(SecurityPack.lenses, "pii_answer", kinds=[*DEFAULT_PII_KINDS, *DUTCH_PII_KINDS]),
         LegalRisk,
         LensPack(QualityPack.lenses, "helpfulness"),
         UserTone,
