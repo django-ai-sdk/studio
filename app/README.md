@@ -21,6 +21,21 @@ just app::run              # http://localhost:8000; just app::run 8001 for a sec
 just app::test
 ```
 
+Workflow runs need the worker next to the web server: `just app::worker`.
+
+### In Docker
+
+```bash
+just app::up               # web on :8000 and the worker, SDK from ../../sdk (relative to app/)
+just app::up ~/code/sdk    # another local SDK checkout
+just app::up pypi          # the latest django-ai-sdk release from PyPI
+just app::down
+```
+
+A one-off `setup` service installs the dependencies into a shared volume and migrates; `web`
+and `worker` start once it succeeds. The local SDK is mounted at `/sdk` and installed editable,
+so changes in it reload the web server. `PORT=8001 just app::up` maps another host port.
+
 Every demo keeps its own `db.sqlite3`, uploads and vector stores in its folder, so
 several can run side by side on different ports.
 

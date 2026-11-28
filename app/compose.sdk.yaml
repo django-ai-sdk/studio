@@ -1,0 +1,10 @@
+x-sdk: &sdk
+  environment:
+    SDK: local
+  volumes:
+    - ${SDK_PATH:?set SDK_PATH to a local django-ai-sdk checkout}:/sdk
+
+services:
+  setup: *sdk
+  web: *sdk
+  worker: *sdk

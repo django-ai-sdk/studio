@@ -17,3 +17,21 @@ db:
 
 test:
     uv run pytest -v
+
+[doc("Workflow worker on DBOS")]
+worker:
+    uv run python manage.py ai_sdk_worker
+
+[working-directory('..')]
+[doc("Web and worker in Docker; sdk is pypi or a local SDK path, relative to app/ (default ../../sdk)")]
+up sdk="../../sdk":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{sdk}}" = pypi ]; then
+        exec docker compose up
+    fi
+    SDK_PATH="$(cd "{{sdk}}" && pwd)" exec docker compose -f compose.yaml -f compose.sdk.yaml up
+
+[working-directory('..')]
+down:
+    docker compose down
