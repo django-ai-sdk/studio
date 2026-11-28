@@ -5,6 +5,5 @@ x-sdk: &sdk
     - ${SDK_PATH:?set SDK_PATH to a local django-ai-sdk checkout}:/sdk
 
 services:
-  setup: *sdk
   web: *sdk
   worker: *sdk

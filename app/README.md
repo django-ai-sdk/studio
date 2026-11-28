@@ -32,8 +32,8 @@ just app::up pypi          # the latest django-ai-sdk release from PyPI
 just app::down
 ```
 
-A one-off `setup` service installs the dependencies into a shared volume and migrates; `web`
-and `worker` start once it succeeds. The local SDK is mounted at `/sdk` and installed editable,
+`web` installs the dependencies into a shared volume, migrates and starts the server; `worker`
+starts once `web` is healthy and uses the same volume. The local SDK is mounted at `/sdk` and installed editable,
 so changes in it reload the web server. `PORT=8001 just app::up` maps another host port.
 
 Every demo keeps its own `db.sqlite3`, uploads and vector stores in its folder, so

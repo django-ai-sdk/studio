@@ -14,7 +14,7 @@ x-app: &app
     - uv-cache:/root/.cache/uv
 
 services:
-  setup:
+  web:
     <<: *app
     working_dir: /src/app
     command:
@@ -28,20 +28,21 @@ services:
           uv export --frozen --no-dev --no-hashes --no-emit-package django-ai-sdk -o /tmp/requirements.txt
           uv pip install --python /venv --prerelease allow --reinstall-package django-ai-sdk -r /tmp/requirements.txt "django-ai-sdk[qdrant,mcp,files,dbos]"
         fi
-        cd studio && /venv/bin/python manage.py migrate
-
-  web:
-    <<: *app
-    command: ["/venv/bin/python", "manage.py", "runserver", "0.0.0.0:8000"]
+        cd studio
+        /venv/bin/python manage.py migrate
+        exec /venv/bin/python manage.py runserver 0.0.0.0:8000
     ports: ["${PORT:-8000}:8000"]
-    depends_on:
-      setup: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "/venv/bin/python", "-c", "import socket; socket.create_connection(('localhost', 8000), 1)"]
+      start_period: 10m
+      start_interval: 2s
+      interval: 30s
 
   worker:
     <<: *app
     command: ["/venv/bin/python", "manage.py", "ai_sdk_worker"]
     depends_on:
-      setup: {condition: service_completed_successfully}
+      web: {condition: service_healthy}
 
 volumes:
   venv:
